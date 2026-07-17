@@ -37,6 +37,7 @@ __export(index_exports, {
   getActionSourceStages: () => getActionSourceStages,
   getDeclaredActions: () => getDeclaredActions,
   lintFlow: () => lintFlow,
+  lintInterpreterFlow: () => lintInterpreterFlow,
   transition: () => transition,
   validateRegistryRefs: () => validateRegistryRefs
 });
@@ -144,6 +145,23 @@ function lintFlow(definition) {
   }
   return issues;
 }
+function lintInterpreterFlow(definition) {
+  const issues = lintFlow(definition);
+  for (const [stageName, stage] of Object.entries(definition.stages)) {
+    for (const [actionName, action] of Object.entries(stage.actions ?? {})) {
+      if ((action.kind ?? "human") === "system" || action.policy) {
+        continue;
+      }
+      pushIssue(issues, {
+        code: "missing-action-policy",
+        severity: "error",
+        message: `Human action "${stageName}.${actionName}" must declare an authorization policy.`,
+        path: `stages.${stageName}.actions.${actionName}.policy`
+      });
+    }
+  }
+  return issues;
+}
 function validateRegistryRefs(definition, registry) {
   const issues = [];
   for (const [stageName, stage] of Object.entries(definition.stages)) {
@@ -217,7 +235,14 @@ var stepDefSchema = import_zod.z.object({
   kind: import_zod.z.enum(["system", "ai", "rule"]),
   ref: import_zod.z.string(),
   gate: import_zod.z.literal("human").optional()
-}).strict();
+}).strict().superRefine((step, ctx) => {
+  if (step.gate !== void 0 && step.kind !== "ai") {
+    addIssue(ctx, ["gate"], `Step gate is only accepted on AI steps, not "${step.kind}" steps.`);
+  }
+  if (step.kind === "ai" && step.gate !== "human") {
+    addIssue(ctx, ["gate"], `AI step "${step.ref}" must declare gate "human".`);
+  }
+});
 var notificationSchema = import_zod.z.object({
   template: import_zod.z.string(),
   channels: import_zod.z.array(import_zod.z.string()),
@@ -225,6 +250,7 @@ var notificationSchema = import_zod.z.object({
 }).strict();
 var actionDefSchema = import_zod.z.object({
   to: import_zod.z.string(),
+  kind: import_zod.z.enum(["human", "system"]).optional(),
   status: import_zod.z.string().optional(),
   pendingRole: import_zod.z.string().nullable().optional(),
   tracks: import_zod.z.record(import_zod.z.string()).optional(),
@@ -268,7 +294,7 @@ var findDuplicates = (values) => {
 };
 var flowSchema = import_zod.z.object({
   id: import_zod.z.string(),
-  version: import_zod.z.number(),
+  version: import_zod.z.number().int().nonnegative(),
   roles: import_zod.z.array(import_zod.z.string()),
   tracks: import_zod.z.record(trackDefSchema).optional(),
   initialStage: import_zod.z.string(),
@@ -380,12 +406,21 @@ var flowSchema = import_zod.z.object({
         `Stage "${stageName}" SLA notify role "${escalate.notify}" is undeclared.`
       );
     }
-    if (escalate.action && !stage.actions?.[escalate.action]) {
-      addIssue(
-        ctx,
-        ["stages", stageName, "sla", "escalate", "action"],
-        `Stage "${stageName}" SLA action "${escalate.action}" is not declared on the same stage.`
-      );
+    if (escalate.action) {
+      const escalateTarget = stage.actions?.[escalate.action];
+      if (!escalateTarget) {
+        addIssue(
+          ctx,
+          ["stages", stageName, "sla", "escalate", "action"],
+          `Stage "${stageName}" SLA action "${escalate.action}" is not declared on the same stage.`
+        );
+      } else if ((escalateTarget.kind ?? "human") !== "system") {
+        addIssue(
+          ctx,
+          ["stages", stageName, "sla", "escalate", "action"],
+          `Stage "${stageName}" SLA action "${escalate.action}" must target a system action.`
+        );
+      }
     }
   }
 });
@@ -627,6 +662,7 @@ var FLOWKIT_CORE_VERSION = "0.1.0";
   getActionSourceStages,
   getDeclaredActions,
   lintFlow,
+  lintInterpreterFlow,
   transition,
   validateRegistryRefs
 });

@@ -11,6 +11,7 @@ interface StepDef {
 }
 interface ActionDef {
     to: string;
+    kind?: 'human' | 'system';
     status?: string;
     pendingRole?: string | null;
     tracks?: Record<string, string>;
@@ -91,7 +92,7 @@ type Guard = (ctx: PredicateContext) => boolean;
 type GuardRegistry = Record<string, Guard>;
 type AuthorizationPolicy = (ctx: PredicateContext) => boolean;
 type AuthorizationPolicyRegistry = Record<string, AuthorizationPolicy>;
-type LintIssueCode = 'unreachable-stage' | 'dead-end-stage' | 'final-stage-has-actions' | 'unused-role' | 'unused-track' | 'duplicate-action-source' | 'missing-guard-ref' | 'missing-policy-ref' | 'missing-step-ref' | 'missing-template-ref' | 'missing-channel-ref';
+type LintIssueCode = 'unreachable-stage' | 'dead-end-stage' | 'final-stage-has-actions' | 'unused-role' | 'unused-track' | 'duplicate-action-source' | 'missing-guard-ref' | 'missing-policy-ref' | 'missing-step-ref' | 'missing-template-ref' | 'missing-channel-ref' | 'missing-action-policy';
 interface LintIssue {
     code: LintIssueCode;
     severity: 'error' | 'warning';
@@ -107,6 +108,15 @@ interface RegistryRefs {
     channels?: Record<string, unknown>;
 }
 declare function lintFlow(definition: FlowDefinition): LintIssue[];
+/**
+ * Interpreter-facing lint: everything {@link lintFlow} reports, plus a hard
+ * error for every human action that does not declare an authorization policy.
+ *
+ * The policy-neutral {@link lintFlow} default is unchanged so `flowkit-core`
+ * remains usable as a kernel; interpreters (for example `flowkit-temporal`)
+ * promote this helper's result to a boot failure.
+ */
+declare function lintInterpreterFlow(definition: FlowDefinition): LintIssue[];
 declare function validateRegistryRefs(definition: FlowDefinition, registry: RegistryRefs): LintIssue[];
 
 declare const flowSchema: z.ZodType<FlowDefinition>;
@@ -181,4 +191,4 @@ declare function transition(definition: FlowDefinition, state: FlowState, comman
 
 declare const FLOWKIT_CORE_VERSION = "0.1.0";
 
-export { type ActionDef, type ActionName, type AuthorizationPolicy, type AuthorizationPolicyRegistry, AuthorizationRejectionError, type EvaluationContext, FLOWKIT_CORE_VERSION, type FlowCommand, type FlowDefinition, FlowDefinitionError, type FlowState, type FlowStateOverrides, type Guard, type GuardRegistry, GuardRejectionError, InvalidTrackValueError, InvalidTransitionError, type LintIssue, type LintIssueCode, MissingGuardError, MissingPolicyError, type PredicateContext, type StageDef, type StageName, type StepDef, type TrackDef, type TransitionOutcome, type TransitionRecord, UnknownStageError, UnknownTrackError, buildInitialState, defineFlow, flowSchema, formatIssues, getActionSourceStages, getDeclaredActions, lintFlow, transition, validateRegistryRefs };
+export { type ActionDef, type ActionName, type AuthorizationPolicy, type AuthorizationPolicyRegistry, AuthorizationRejectionError, type EvaluationContext, FLOWKIT_CORE_VERSION, type FlowCommand, type FlowDefinition, FlowDefinitionError, type FlowState, type FlowStateOverrides, type Guard, type GuardRegistry, GuardRejectionError, InvalidTrackValueError, InvalidTransitionError, type LintIssue, type LintIssueCode, MissingGuardError, MissingPolicyError, type PredicateContext, type StageDef, type StageName, type StepDef, type TrackDef, type TransitionOutcome, type TransitionRecord, UnknownStageError, UnknownTrackError, buildInitialState, defineFlow, flowSchema, formatIssues, getActionSourceStages, getDeclaredActions, lintFlow, lintInterpreterFlow, transition, validateRegistryRefs };
