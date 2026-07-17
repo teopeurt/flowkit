@@ -10,7 +10,10 @@ interface FlowkitWorkflowConfig {
     updateName?: string;
     maxAutomaticTransitionsPerTurn?: number;
     shouldContinueAsNew?: () => boolean;
-    adaptState?: (state: FlowkitStateView) => unknown;
+    adaptState?: (args: {
+        state: FlowkitStateView;
+        input: FlowkitWorkflowInput;
+    }) => unknown;
 }
 type FlowkitWorkflow = (input: FlowkitWorkflowInput) => Promise<unknown>;
 /**

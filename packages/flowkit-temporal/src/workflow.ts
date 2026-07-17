@@ -39,7 +39,7 @@ export interface FlowkitWorkflowConfig {
   updateName?: string;
   maxAutomaticTransitionsPerTurn?: number;
   shouldContinueAsNew?: () => boolean;
-  adaptState?: (state: FlowkitStateView) => unknown;
+  adaptState?: (args: { state: FlowkitStateView; input: FlowkitWorkflowInput }) => unknown;
 }
 
 export type FlowkitWorkflow = (input: FlowkitWorkflowInput) => Promise<unknown>;
@@ -101,7 +101,8 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
     let automaticTransitions = 0;
 
     const view = () => stateView(execution, definition);
-    const adaptedView = () => (config.adaptState?.(view()) ?? view()) as FlowkitStateView;
+    const adaptedView = () =>
+      (config.adaptState?.({ state: view(), input }) ?? view()) as FlowkitStateView;
 
     setHandler(query, view);
     setHandler(update, async (command) => {

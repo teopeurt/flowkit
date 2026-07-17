@@ -69,7 +69,7 @@ function createFlowkitWorkflow(config) {
     let draining = false;
     let automaticTransitions = 0;
     const view = () => stateView(execution, definition);
-    const adaptedView = () => config.adaptState?.(view()) ?? view();
+    const adaptedView = () => config.adaptState?.({ state: view(), input }) ?? view();
     setHandler(query, view);
     setHandler(update, async (command) => {
       const updateId = currentUpdateInfo()?.id;
