@@ -11,6 +11,7 @@ export interface StepDef {
 
 export interface ActionDef {
   to: string;
+  kind?: 'human' | 'system';
   status?: string;
   pendingRole?: string | null;
   tracks?: Record<string, string>;
@@ -96,7 +97,8 @@ export type LintIssueCode =
   | 'missing-policy-ref'
   | 'missing-step-ref'
   | 'missing-template-ref'
-  | 'missing-channel-ref';
+  | 'missing-channel-ref'
+  | 'missing-action-policy';
 
 export interface LintIssue {
   code: LintIssueCode;

@@ -134,6 +134,35 @@ export function lintFlow(definition: FlowDefinition): LintIssue[] {
   return issues;
 }
 
+/**
+ * Interpreter-facing lint: everything {@link lintFlow} reports, plus a hard
+ * error for every human action that does not declare an authorization policy.
+ *
+ * The policy-neutral {@link lintFlow} default is unchanged so `flowkit-core`
+ * remains usable as a kernel; interpreters (for example `flowkit-temporal`)
+ * promote this helper's result to a boot failure.
+ */
+export function lintInterpreterFlow(definition: FlowDefinition): LintIssue[] {
+  const issues = lintFlow(definition);
+
+  for (const [stageName, stage] of Object.entries(definition.stages)) {
+    for (const [actionName, action] of Object.entries(stage.actions ?? {})) {
+      if ((action.kind ?? 'human') === 'system' || action.policy) {
+        continue;
+      }
+
+      pushIssue(issues, {
+        code: 'missing-action-policy',
+        severity: 'error',
+        message: `Human action "${stageName}.${actionName}" must declare an authorization policy.`,
+        path: `stages.${stageName}.actions.${actionName}.policy`,
+      });
+    }
+  }
+
+  return issues;
+}
+
 export function validateRegistryRefs(
   definition: FlowDefinition,
   registry: RegistryRefs,

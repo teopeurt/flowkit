@@ -21,7 +21,16 @@ const stepDefSchema: z.ZodType<StepDef> = z
     ref: z.string(),
     gate: z.literal('human').optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((step, ctx) => {
+    if (step.gate !== undefined && step.kind !== 'ai') {
+      addIssue(ctx, ['gate'], `Step gate is only accepted on AI steps, not "${step.kind}" steps.`);
+    }
+
+    if (step.kind === 'ai' && step.gate !== 'human') {
+      addIssue(ctx, ['gate'], `AI step "${step.ref}" must declare gate "human".`);
+    }
+  });
 
 const notificationSchema = z
   .object({
@@ -34,6 +43,7 @@ const notificationSchema = z
 const actionDefSchema: z.ZodType<ActionDef> = z
   .object({
     to: z.string(),
+    kind: z.enum(['human', 'system']).optional(),
     status: z.string().optional(),
     pendingRole: z.string().nullable().optional(),
     tracks: z.record(z.string()).optional(),
@@ -98,7 +108,7 @@ const findDuplicates = (values: readonly string[]) => {
 export const flowSchema: z.ZodType<FlowDefinition> = z
   .object({
     id: z.string(),
-    version: z.number(),
+    version: z.number().int().nonnegative(),
     roles: z.array(z.string()),
     tracks: z.record(trackDefSchema).optional(),
     initialStage: z.string(),
@@ -230,12 +240,22 @@ export const flowSchema: z.ZodType<FlowDefinition> = z
         );
       }
 
-      if (escalate.action && !stage.actions?.[escalate.action]) {
-        addIssue(
-          ctx,
-          ['stages', stageName, 'sla', 'escalate', 'action'],
-          `Stage "${stageName}" SLA action "${escalate.action}" is not declared on the same stage.`,
-        );
+      if (escalate.action) {
+        const escalateTarget = stage.actions?.[escalate.action];
+
+        if (!escalateTarget) {
+          addIssue(
+            ctx,
+            ['stages', stageName, 'sla', 'escalate', 'action'],
+            `Stage "${stageName}" SLA action "${escalate.action}" is not declared on the same stage.`,
+          );
+        } else if ((escalateTarget.kind ?? 'human') !== 'system') {
+          addIssue(
+            ctx,
+            ['stages', stageName, 'sla', 'escalate', 'action'],
+            `Stage "${stageName}" SLA action "${escalate.action}" must target a system action.`,
+          );
+        }
       }
     }
   });

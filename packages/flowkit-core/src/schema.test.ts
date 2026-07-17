@@ -39,7 +39,7 @@ const validDefinition = () => ({
         escalate: { notify: 'supervisor', action: 'publish' },
       },
       actions: {
-        publish: { to: 'published', status: 'approved', tracks: { visibility: 'public' } },
+        publish: { to: 'published', kind: 'system' as const, status: 'approved', tracks: { visibility: 'public' } },
       },
     },
     published: { final: true },
@@ -160,5 +160,84 @@ describe('flowSchema', () => {
   test('rejects an SLA auto-action not declared on the same stage', () => {
     const d = validDefinition();
     expectInvalid({ ...d, stages: { ...d.stages, review: { ...d.stages.review, sla: { after: '72h', escalate: { action: 'submit' } } } } });
+  });
+
+  test('rejects an SLA auto-action targeting a human action', () => {
+    const d = validDefinition();
+    expectInvalid({
+      ...d,
+      stages: {
+        ...d.stages,
+        review: {
+          ...d.stages.review,
+          actions: {
+            publish: { to: 'published', status: 'approved', tracks: { visibility: 'public' } },
+          },
+        },
+      },
+    });
+  });
+
+  test.each([
+    ['system', { kind: 'system' as const, ref: 'prepareDraft', gate: 'human' as const }],
+    ['rule', { kind: 'rule' as const, ref: 'autoApprove', gate: 'human' as const }],
+  ])('rejects a gate on a %s step', (_kind: string, step: unknown) => {
+    const d = validDefinition();
+    expectInvalid({
+      ...d,
+      stages: { ...d.stages, draft: { ...d.stages.draft, entry: [step] } },
+    });
+  });
+
+  test('rejects an AI step without a human gate', () => {
+    const d = validDefinition();
+    expectInvalid({
+      ...d,
+      stages: {
+        ...d.stages,
+        draft: { ...d.stages.draft, entry: [{ kind: 'ai', ref: 'summarize' }] },
+      },
+    });
+  });
+
+  test('accepts an AI step gated by a human', () => {
+    const d = validDefinition();
+    const definition = {
+      ...d,
+      stages: {
+        ...d.stages,
+        draft: {
+          ...d.stages.draft,
+          entry: [{ kind: 'ai', ref: 'summarize', gate: 'human' }],
+        },
+      },
+    };
+
+    expect(flowSchema.safeParse(definition).success).toBe(true);
+  });
+
+  test.each([
+    ['negative', -1],
+    ['fractional', 1.5],
+  ])('rejects a %s definition version', (_kind: string, version: number) => {
+    expectInvalid({ ...validDefinition(), version });
+  });
+
+  test('accepts explicit human and system action kinds', () => {
+    const d = validDefinition();
+    const definition = {
+      ...d,
+      stages: {
+        ...d.stages,
+        draft: {
+          ...d.stages.draft,
+          actions: {
+            submit: { ...d.stages.draft.actions.submit, kind: 'human' },
+          },
+        },
+      },
+    };
+
+    expect(flowSchema.safeParse(definition).success).toBe(true);
   });
 });

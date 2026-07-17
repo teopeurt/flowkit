@@ -1,6 +1,6 @@
 export const FLOWKIT_CORE_VERSION = '0.1.0';
 
-export { validateRegistryRefs, lintFlow } from './lint';
+export { validateRegistryRefs, lintFlow, lintInterpreterFlow } from './lint';
 export { defineFlow, FlowDefinitionError, flowSchema, formatIssues } from './schema';
 export {
   AuthorizationRejectionError,
