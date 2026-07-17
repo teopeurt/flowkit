@@ -7,6 +7,12 @@ export {
   SnapshotError,
   verifyPublishedDefinition,
 } from './snapshot';
+export {
+  assertValidFlowkit,
+  FlowkitValidationError,
+  parseSlaDuration,
+  validateFlowkit,
+} from './validation';
 export type {
   CommandEnvelope,
   CommandOrigin,
@@ -19,11 +25,16 @@ export type {
   ExecuteSystemStepInput,
   ExecuteSystemStepOutput,
   FlowkitActorRef,
+  FlowkitActivityRegistry,
+  FlowkitDeclaredRefs,
   FlowkitExecutionState,
   FlowkitNotificationBinding,
   FlowkitStateView,
   FlowkitStepResult,
   FlowkitSubject,
+  FlowkitPureRegistries,
+  FlowkitRule,
+  FlowkitRuleRegistration,
   FlowkitWorkflowInput,
   PublishedFlowDefinition,
   RecordStageReadyInput,
@@ -31,4 +42,9 @@ export type {
   RecordTransitionOutput,
   ResolveActionContextInput,
   ResolvedActionContext,
+  RuleContext,
 } from './contracts';
+export type {
+  FlowkitValidationIssue,
+  FlowkitValidationRegistries,
+} from './validation';

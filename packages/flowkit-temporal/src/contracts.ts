@@ -1,7 +1,9 @@
 import type {
+  AuthorizationPolicyRegistry,
   FlowCommand,
   FlowDefinition,
   FlowState,
+  GuardRegistry,
   TransitionRecord,
 } from '@flowkit/core';
 
@@ -190,4 +192,60 @@ export interface DispatchNotificationInput {
   subject: FlowkitSubject;
   notification: FlowkitNotificationBinding;
   context?: Record<string, unknown>;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Registries                                                                */
+/* ------------------------------------------------------------------------ */
+
+/** Pure rule evaluation context; rules run on stage entry, inside the loop. */
+export interface RuleContext {
+  definition: FlowDefinition;
+  state: FlowState;
+  subject: Readonly<Record<string, unknown>>;
+  facts: Readonly<Record<string, unknown>>;
+  priorTransition?: TransitionRecord;
+}
+
+/**
+ * A pure rule returns the name of a follow-up system action, or `undefined`
+ * when no automatic transition should fire.
+ */
+export type FlowkitRule = (ctx: RuleContext) => string | undefined;
+
+export interface FlowkitRuleRegistration {
+  run: FlowkitRule;
+  /**
+   * Finite set of system action names this rule may return. Boot validation
+   * rejects registrations that could target a human or unknown action.
+   */
+  actions: string[];
+}
+
+/** Compiled pure registries bundled with the workflow code. */
+export interface FlowkitPureRegistries {
+  policies?: AuthorizationPolicyRegistry;
+  guards?: GuardRegistry;
+  rules?: Record<string, FlowkitRuleRegistration>;
+}
+
+/**
+ * Declared refs for I/O work. The workflow bundle only carries the names;
+ * the consumer's worker registers the actual handlers.
+ */
+export interface FlowkitDeclaredRefs {
+  systemSteps?: Record<string, unknown>;
+  aiSteps?: Record<string, unknown>;
+  templates?: Record<string, unknown>;
+  channels?: Record<string, unknown>;
+}
+
+/** Activity handler surface implemented by the consumer's worker. */
+export interface FlowkitActivityRegistry {
+  resolveActionContext(input: ResolveActionContextInput): Promise<ResolvedActionContext>;
+  recordTransition(input: RecordTransitionInput): Promise<RecordTransitionOutput>;
+  recordStageReady(input: RecordStageReadyInput): Promise<void>;
+  executeSystemStep(input: ExecuteSystemStepInput): Promise<ExecuteSystemStepOutput>;
+  executeAiStep(input: ExecuteAiStepInput): Promise<ExecuteAiStepOutput>;
+  dispatchNotification(input: DispatchNotificationInput): Promise<void>;
 }
