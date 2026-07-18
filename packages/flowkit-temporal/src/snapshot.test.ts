@@ -72,6 +72,15 @@ describe('canonicalizeJson', () => {
 });
 
 describe('publishDefinition', () => {
+  test('normalizes absent optional definition fields before hashing', () => {
+    const input = definition();
+    input.stages.draft.entry = undefined;
+
+    const published = publishDefinition({ definition: input });
+
+    expect(/^sha256:[0-9a-f]{64}$/.test(published.definitionHash)).toBe(true);
+  });
+
   test('returns a detached, deeply frozen snapshot', () => {
     const input = definition();
     const published = publishDefinition({ definition: input });

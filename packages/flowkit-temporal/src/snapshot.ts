@@ -142,7 +142,10 @@ export function publishDefinition(args: {
   definition: FlowDefinition;
 }): PublishedFlowDefinition {
   const parsed = defineFlow(args.definition);
-  const canonical = canonicalizeJson(parsed);
+  // Zod preserves explicitly supplied optional `undefined` fields. They have
+  // no JSON representation, so remove them only after strict schema parsing.
+  const normalized = JSON.parse(JSON.stringify(parsed)) as FlowDefinition;
+  const canonical = canonicalizeJson(normalized);
   const snapshot = deepFreeze(JSON.parse(canonical)) as FlowDefinition;
 
   return {
