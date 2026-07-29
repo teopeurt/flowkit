@@ -93,4 +93,25 @@ describe('createFlowkitConsumer', () => {
 
     expect(calls).toEqual(['start:leave-1', 'act:submit-1', 'claim:task-1', 'list:manager']);
   });
+
+  it('only returns open tasks the canonical actor is eligible to claim while retaining its claims', async () => {
+    const openAssigned = { id: 'task-assigned', role: 'manager', status: 'open', assigneeId: null } as FlowTask;
+    const openUnassigned = { id: 'task-unassigned', role: 'manager', status: 'open', assigneeId: null } as FlowTask;
+    const claimedByManager = { id: 'task-claimed', role: 'manager', status: 'claimed', assigneeId: 'manager-server-id' } as FlowTask;
+    const consumer = createFlowkitConsumer({
+      definition,
+      runtime: fakeRuntime([]),
+      tasks: {
+        inbox: async () => ({ items: [openAssigned, openUnassigned, claimedByManager], nextCursor: null }),
+      } as unknown as TaskStore,
+      actorResolver: { resolve: async () => ({ id: 'manager-server-id', roles: ['manager'] }) },
+      eligibility: { canWorkRole: async ({ task }) => task.id === openAssigned.id },
+      clock: { now: () => '2026-07-29T00:00:00.000Z' },
+      views: { read: (view) => view, readByFlowId: async () => state },
+    });
+
+    const page = await consumer.tasks.list({ actor: manager });
+
+    expect(page.items.map((task) => task.id)).toEqual([openAssigned.id, claimedByManager.id]);
+  });
 });
