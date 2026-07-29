@@ -6,11 +6,11 @@ import type {
   FlowkitConsumerClaim,
 } from './contracts.js';
 
-function toClaimCommand(input: FlowkitConsumerClaim, now: string) {
+function toClaimCommand(input: FlowkitConsumerClaim, actorId: string, now: string) {
   return {
     taskId: input.taskId,
     expectedRevision: input.expectedRevision,
-    actorId: input.actor.id,
+    actorId,
     operationId: input.operationId,
     now,
   };
@@ -41,18 +41,22 @@ export function createFlowkitConsumer(deps: ConsumerDependencies): FlowkitConsum
     },
     getFlow: (flowId) => deps.views.readByFlowId(flowId),
     tasks: {
-      claim: async (input): Promise<FlowTask> =>
-        (await claimTask({
+      claim: async (input): Promise<FlowTask> => {
+        const actor = await deps.actorResolver.resolve(input.actor.id);
+        return (await claimTask({
           store: deps.tasks,
           eligibility: deps.eligibility,
-          command: toClaimCommand(input, deps.clock.now()),
-        })) as FlowTask,
-      list: ({ actor }) =>
-        deps.tasks.inbox({
+          command: toClaimCommand(input, actor.id, deps.clock.now()),
+        })) as FlowTask;
+      },
+      list: async ({ actor }) => {
+        const resolvedActor = await deps.actorResolver.resolve(actor.id);
+        return deps.tasks.inbox({
           view: 'role_queue',
-          roles: actor.roles,
+          roles: resolvedActor.roles,
           statuses: ['open', 'claimed'],
-        }),
+        });
+      },
     },
   };
 }

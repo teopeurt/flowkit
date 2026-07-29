@@ -26,11 +26,11 @@ module.exports = __toCommonJS(index_exports);
 
 // src/consumer.ts
 var import_tasks = require("@flowkit/tasks");
-function toClaimCommand(input, now) {
+function toClaimCommand(input, actorId, now) {
   return {
     taskId: input.taskId,
     expectedRevision: input.expectedRevision,
-    actorId: input.actor.id,
+    actorId,
     operationId: input.operationId,
     now
   };
@@ -59,16 +59,22 @@ function createFlowkitConsumer(deps) {
     },
     getFlow: (flowId) => deps.views.readByFlowId(flowId),
     tasks: {
-      claim: async (input) => await (0, import_tasks.claimTask)({
-        store: deps.tasks,
-        eligibility: deps.eligibility,
-        command: toClaimCommand(input, deps.clock.now())
-      }),
-      list: ({ actor }) => deps.tasks.inbox({
-        view: "role_queue",
-        roles: actor.roles,
-        statuses: ["open", "claimed"]
-      })
+      claim: async (input) => {
+        const actor = await deps.actorResolver.resolve(input.actor.id);
+        return await (0, import_tasks.claimTask)({
+          store: deps.tasks,
+          eligibility: deps.eligibility,
+          command: toClaimCommand(input, actor.id, deps.clock.now())
+        });
+      },
+      list: async ({ actor }) => {
+        const resolvedActor = await deps.actorResolver.resolve(actor.id);
+        return deps.tasks.inbox({
+          view: "role_queue",
+          roles: resolvedActor.roles,
+          statuses: ["open", "claimed"]
+        });
+      }
     }
   };
 }
