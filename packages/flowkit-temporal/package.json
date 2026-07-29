@@ -30,12 +30,12 @@
   "dependencies": {
     "@flowkit/consumer": "file:../flowkit-consumer",
     "@flowkit/core": "file:../flowkit-core",
+    "@noble/hashes": "^2.0.1",
     "@temporalio/workflow": "1.16.2"
   },
   "devDependencies": {
     "@temporalio/testing": "1.16.2",
     "@temporalio/worker": "1.16.2",
-    "@noble/hashes": "^2.0.1",
     "tsup": "^8.5.0",
     "typescript": "^5"
   }

@@ -146,6 +146,8 @@ export interface RecordTransitionInput {
 export interface RecordTransitionOutput {
   /** Projected state; an idempotent retry returns the stored state. */
   state: FlowState;
+  /** False when the operation was already committed. */
+  created?: boolean;
 }
 
 export interface RecordStageReadyInput {

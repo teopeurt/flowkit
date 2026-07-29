@@ -1,7 +1,7 @@
 import {
   parseSlaDuration,
   verifyPublishedDefinition
-} from "./chunk-NT4A46J4.js";
+} from "./chunk-RAAHYPY6.js";
 
 // src/workflow.ts
 import {
@@ -70,7 +70,7 @@ function createFlowkitWorkflow(config) {
     let automaticTransitions = 0;
     const view = () => stateView(execution, definition);
     const adaptedView = () => config.adaptState?.({ state: view(), input }) ?? view();
-    setHandler(query, view);
+    setHandler(query, adaptedView);
     setHandler(update, async (command) => {
       const updateId = currentUpdateInfo()?.id;
       if (!updateId) {
@@ -175,7 +175,8 @@ function createFlowkitWorkflow(config) {
           envelope.completion?.resolve(adaptedView());
           continue;
         }
-        const outcome = transition(definition, execution.state, envelope.command, {
+        const command = envelope.origin === "human" && context.actor ? { ...envelope.command, actorId: context.actor.id } : envelope.command;
+        const outcome = transition(definition, execution.state, command, {
           actor: context.actor,
           facts: context.facts,
           subject: input.subject.metadata,
@@ -190,7 +191,7 @@ function createFlowkitWorkflow(config) {
           origin: envelope.origin,
           definition: definitionIdentity,
           subject: input.subject,
-          command: envelope.command,
+          command,
           previousState: execution.state,
           nextState: outcome.state,
           transition: outcome.transition,
@@ -205,6 +206,7 @@ function createFlowkitWorkflow(config) {
           await armSla();
         }
         envelope.completion?.resolve(adaptedView());
+        if (commands.length === 0) automaticTransitions = 0;
       } catch (error) {
         if (!envelope.completion && error instanceof ApplicationFailure && error.type === "FLOWKIT_AUTOMATIC_LOOP") {
           throw error;

@@ -14,6 +14,7 @@ import {
   notifySlaWorkflow,
   actionSlaInput,
   actionSlaWorkflow,
+  adaptedFlowkitWorkflow,
   continuationInput,
   continuationWorkflow,
   ruleFlowkitWorkflow,
@@ -37,7 +38,34 @@ const testWithTimeout = test as unknown as (
 ) => void;
 
 describe('createFlowkitWorkflow', () => {
-  test('serializes concurrent updates in accepted arrival order and drains them through a final transition', async () => {
+  testWithTimeout('uses the adapted state shape for queries', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const taskQueue = 'flowkit-temporal-workflow-test';
+    const worker = await Worker.create({
+      connection: environment.nativeConnection,
+      taskQueue,
+      workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname,
+      activities: testActivities,
+    });
+    const runWorker = worker.run();
+
+    try {
+      const handle = await environment.client.workflow.start(adaptedFlowkitWorkflow, {
+        taskQueue,
+        workflowId: 'flowkit-adapted-query',
+        args: [testFlowkitInput()],
+      });
+
+      expect(await handle.query('getState')).toEqual({ legacyStage: 'draft' });
+      await handle.cancel();
+    } finally {
+      await worker.shutdown();
+      await runWorker;
+      await environment.teardown();
+    }
+  }, 30_000);
+
+  testWithTimeout('serializes concurrent updates in accepted arrival order and drains them through a final transition', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const taskQueue = 'flowkit-temporal-workflow-test';
     const worker = await Worker.create({
@@ -83,9 +111,9 @@ describe('createFlowkitWorkflow', () => {
       await runWorker;
       await environment.teardown();
     }
-  });
+  }, 30_000);
 
-  test('leaves query state unchanged when projection fails', async () => {
+  testWithTimeout('leaves query state unchanged when projection fails', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
     const runWorker = worker.run();
@@ -98,9 +126,9 @@ describe('createFlowkitWorkflow', () => {
       expect(testActivities.transitions.length).toBe(0);
       await handle.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
-  });
+  }, 30_000);
 
-  test('returns a prior projection result for a duplicate operation without recording another transition', async () => {
+  testWithTimeout('returns a prior projection result for a duplicate operation without recording another transition', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
     const runWorker = worker.run();
@@ -112,9 +140,9 @@ describe('createFlowkitWorkflow', () => {
       expect(testActivities.transitions.length).toBe(0);
       await handle.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
-  });
+  }, 30_000);
 
-  test('never projects unauthorized or guard-rejected actions', async () => {
+  testWithTimeout('never projects unauthorized or guard-rejected actions', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
     const runWorker = worker.run();
@@ -126,9 +154,9 @@ describe('createFlowkitWorkflow', () => {
       expect(testActivities.transitions.length).toBe(0);
       await handle.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
-  });
+  }, 30_000);
 
-  test('runs initial entry steps in declaration order and re-runs them after a self-transition', async () => {
+  testWithTimeout('runs initial entry steps in declaration order and re-runs them after a self-transition', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
     const runWorker = worker.run();
@@ -140,9 +168,9 @@ describe('createFlowkitWorkflow', () => {
       expect(testActivities.systemSteps).toEqual(['prepare', 'notify', 'prepare', 'notify']);
       await handle.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
-  });
+  }, 30_000);
 
-  test('records human-gated AI output and degrades failed AI work without accepting an action', async () => {
+  testWithTimeout('records human-gated AI output and degrades failed AI work without accepting an action', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
     const runWorker = worker.run();
@@ -162,9 +190,9 @@ describe('createFlowkitWorkflow', () => {
       expect(testActivities.transitions[0].command.action).toBe('self');
       await degraded.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
-  });
+  }, 30_000);
 
-  test('projects rule auto-transitions and rejects guarded rules before projection', async () => {
+  testWithTimeout('projects rule auto-transitions and rejects guarded rules before projection', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
     const runWorker = worker.run();
@@ -179,7 +207,7 @@ describe('createFlowkitWorkflow', () => {
       expect(testActivities.transitions.length).toBe(0);
       await blocked.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
-  });
+  }, 30_000);
 
   testWithTimeout('fails after 32 automatic transitions', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();

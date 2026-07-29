@@ -1,4 +1,5 @@
-import { FlowDefinition, AuthorizationPolicyRegistry, GuardRegistry, FlowState, TransitionRecord, FlowCommand } from '@flowkit/core';
+import { proxyActivities } from '@temporalio/workflow';
+import { FlowDefinition, FlowState, AuthorizationPolicyRegistry, GuardRegistry, TransitionRecord, FlowCommand } from '@flowkit/core';
 
 /**
  * Data contracts shared between Flowkit consumers (workers, services) and the
@@ -118,6 +119,8 @@ interface RecordTransitionInput {
 interface RecordTransitionOutput {
     /** Projected state; an idempotent retry returns the stored state. */
     state: FlowState;
+    /** False when the operation was already committed. */
+    created?: boolean;
 }
 interface RecordStageReadyInput {
     workflowId: string;
@@ -206,4 +209,24 @@ interface FlowkitActivityRegistry {
     dispatchNotification(input: DispatchNotificationInput): Promise<void>;
 }
 
-export type { CommandEnvelope as C, DefinitionHash as D, EntryReason as E, FlowkitPureRegistries as F, PublishedFlowDefinition as P, RecordStageReadyInput as R, FlowkitDeclaredRefs as a, CommandOrigin as b, DefinitionIdentity as c, DispatchNotificationInput as d, ExecuteAiStepInput as e, ExecuteAiStepOutput as f, ExecuteSystemStepInput as g, ExecuteSystemStepOutput as h, FlowkitActorRef as i, FlowkitActivityRegistry as j, FlowkitExecutionState as k, FlowkitNotificationBinding as l, FlowkitStateView as m, FlowkitStepResult as n, FlowkitSubject as o, FlowkitRule as p, FlowkitRuleRegistration as q, FlowkitWorkflowInput as r, RecordTransitionInput as s, RecordTransitionOutput as t, ResolveActionContextInput as u, ResolvedActionContext as v, RuleContext as w };
+interface FlowkitWorkflowConfig {
+    registries: FlowkitPureRegistries;
+    activityTaskQueue: string;
+    activityOptions?: Parameters<typeof proxyActivities>[0];
+    queryName?: string;
+    updateName?: string;
+    maxAutomaticTransitionsPerTurn?: number;
+    shouldContinueAsNew?: () => boolean;
+    adaptState?: (args: {
+        state: FlowkitStateView;
+        input: FlowkitWorkflowInput;
+    }) => unknown;
+}
+type FlowkitWorkflow = (input: FlowkitWorkflowInput) => Promise<unknown>;
+/**
+ * Creates a deterministic workflow interpreter. Definitions remain execution
+ * input so replay never reads a mutable definition registry.
+ */
+declare function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWorkflow;
+
+export { type CommandEnvelope as C, type DefinitionHash as D, type EntryReason as E, type FlowkitWorkflow as F, type PublishedFlowDefinition as P, type RecordStageReadyInput as R, type FlowkitWorkflowInput as a, type FlowkitStateView as b, type FlowkitPureRegistries as c, type FlowkitDeclaredRefs as d, type CommandOrigin as e, type DefinitionIdentity as f, type DispatchNotificationInput as g, type ExecuteAiStepInput as h, type ExecuteAiStepOutput as i, type ExecuteSystemStepInput as j, type ExecuteSystemStepOutput as k, type FlowkitActorRef as l, type FlowkitActivityRegistry as m, type FlowkitExecutionState as n, type FlowkitNotificationBinding as o, type FlowkitStepResult as p, type FlowkitSubject as q, type FlowkitRule as r, type FlowkitRuleRegistration as s, type RecordTransitionInput as t, type RecordTransitionOutput as u, type ResolveActionContextInput as v, type ResolvedActionContext as w, type RuleContext as x, type FlowkitWorkflowConfig as y, createFlowkitWorkflow as z };

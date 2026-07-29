@@ -104,7 +104,7 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
     const adaptedView = () =>
       (config.adaptState?.({ state: view(), input }) ?? view()) as FlowkitStateView;
 
-    setHandler(query, view);
+    setHandler(query, adaptedView);
     setHandler(update, async (command) => {
       const updateId = currentUpdateInfo()?.id;
 
@@ -227,7 +227,11 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           continue;
         }
 
-        const outcome = transition(definition, execution.state, envelope.command, {
+        const command = envelope.origin === 'human' && context.actor
+          ? { ...envelope.command, actorId: context.actor.id }
+          : envelope.command;
+
+        const outcome = transition(definition, execution.state, command, {
           actor: context.actor,
           facts: context.facts,
           subject: input.subject.metadata,
@@ -242,7 +246,7 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           origin: envelope.origin,
           definition: definitionIdentity,
           subject: input.subject,
-          command: envelope.command,
+          command,
           previousState: execution.state,
           nextState: outcome.state,
           transition: outcome.transition,
@@ -258,6 +262,7 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           await armSla();
         }
         envelope.completion?.resolve(adaptedView());
+        if (commands.length === 0) automaticTransitions = 0;
       } catch (error) {
         if (
           !envelope.completion &&

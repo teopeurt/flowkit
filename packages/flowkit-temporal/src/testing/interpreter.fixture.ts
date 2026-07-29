@@ -35,8 +35,18 @@ const testInterpreter = createFlowkitWorkflow({
   },
 });
 
+const adaptedInterpreter = createFlowkitWorkflow({
+  activityTaskQueue: 'flowkit-temporal-workflow-test',
+  registries: {},
+  adaptState: ({ state }) => ({ legacyStage: state.state.stage }),
+});
+
 export async function testFlowkitWorkflow(input: FlowkitWorkflowInput) {
   return await testInterpreter(input);
+}
+
+export async function adaptedFlowkitWorkflow(input: FlowkitWorkflowInput) {
+  return await adaptedInterpreter(input);
 }
 
 export const testFlowkitInput = (): FlowkitWorkflowInput => ({

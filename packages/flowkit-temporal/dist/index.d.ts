@@ -1,6 +1,35 @@
-import { FlowDefinition } from '@flowkit/core';
-import { D as DefinitionHash, P as PublishedFlowDefinition, F as FlowkitPureRegistries, a as FlowkitDeclaredRefs } from './contracts-nQAacdxJ.js';
-export { C as CommandEnvelope, b as CommandOrigin, c as DefinitionIdentity, d as DispatchNotificationInput, E as EntryReason, e as ExecuteAiStepInput, f as ExecuteAiStepOutput, g as ExecuteSystemStepInput, h as ExecuteSystemStepOutput, j as FlowkitActivityRegistry, i as FlowkitActorRef, k as FlowkitExecutionState, l as FlowkitNotificationBinding, p as FlowkitRule, q as FlowkitRuleRegistration, m as FlowkitStateView, n as FlowkitStepResult, o as FlowkitSubject, r as FlowkitWorkflowInput, R as RecordStageReadyInput, s as RecordTransitionInput, t as RecordTransitionOutput, u as ResolveActionContextInput, v as ResolvedActionContext, w as RuleContext } from './contracts-nQAacdxJ.js';
+import { FlowRuntime } from '@flowkit/consumer';
+import { FlowCommand, FlowDefinition } from '@flowkit/core';
+import { F as FlowkitWorkflow, a as FlowkitWorkflowInput, b as FlowkitStateView, D as DefinitionHash, P as PublishedFlowDefinition, c as FlowkitPureRegistries, d as FlowkitDeclaredRefs } from './workflow-CVia-PJ6.js';
+export { C as CommandEnvelope, e as CommandOrigin, f as DefinitionIdentity, g as DispatchNotificationInput, E as EntryReason, h as ExecuteAiStepInput, i as ExecuteAiStepOutput, j as ExecuteSystemStepInput, k as ExecuteSystemStepOutput, m as FlowkitActivityRegistry, l as FlowkitActorRef, n as FlowkitExecutionState, o as FlowkitNotificationBinding, r as FlowkitRule, s as FlowkitRuleRegistration, p as FlowkitStepResult, q as FlowkitSubject, R as RecordStageReadyInput, t as RecordTransitionInput, u as RecordTransitionOutput, v as ResolveActionContextInput, w as ResolvedActionContext, x as RuleContext } from './workflow-CVia-PJ6.js';
+import '@temporalio/workflow';
+
+interface TemporalWorkflowHandle {
+    query(name: 'getState'): Promise<FlowkitStateView>;
+    executeUpdate(name: 'applyAction', options: {
+        updateId: string;
+        args: [FlowCommand];
+    }): Promise<FlowkitStateView>;
+}
+interface TemporalRuntimeOptions {
+    client: {
+        workflow: {
+            start(workflowType: FlowkitWorkflow, options: {
+                taskQueue: string;
+                workflowId: string;
+                args: [FlowkitWorkflowInput];
+            }): Promise<TemporalWorkflowHandle>;
+            getHandle(flowId: string): TemporalWorkflowHandle;
+        };
+    };
+    taskQueue: string;
+    workflowType: FlowkitWorkflow;
+    healthProbe(): Promise<{
+        ready: boolean;
+        checkedAt: string;
+    }>;
+}
+declare function createFlowkitTemporalRuntime(options: TemporalRuntimeOptions): FlowRuntime;
 
 declare class SnapshotError extends Error {
     constructor(message: string);
@@ -55,4 +84,4 @@ declare function assertValidFlowkit(args: {
 
 declare const FLOWKIT_TEMPORAL_VERSION = "0.1.0";
 
-export { DefinitionHash, FLOWKIT_TEMPORAL_VERSION, FlowkitDeclaredRefs, FlowkitPureRegistries, FlowkitValidationError, type FlowkitValidationIssue, type FlowkitValidationRegistries, PublishedFlowDefinition, SnapshotError, assertValidFlowkit, canonicalizeJson, hashCanonicalJson, parseSlaDuration, publishDefinition, validateFlowkit, verifyPublishedDefinition };
+export { DefinitionHash, FLOWKIT_TEMPORAL_VERSION, FlowkitDeclaredRefs, FlowkitPureRegistries, FlowkitStateView, FlowkitValidationError, type FlowkitValidationIssue, type FlowkitValidationRegistries, FlowkitWorkflowInput, PublishedFlowDefinition, SnapshotError, assertValidFlowkit, canonicalizeJson, createFlowkitTemporalRuntime, hashCanonicalJson, parseSlaDuration, publishDefinition, validateFlowkit, verifyPublishedDefinition };
