@@ -28,6 +28,7 @@
     "test": "bun test src"
   },
   "dependencies": {
+    "@flowkit/consumer": "file:../flowkit-consumer",
     "@flowkit/core": "file:../flowkit-core",
     "@temporalio/workflow": "1.16.2"
   },

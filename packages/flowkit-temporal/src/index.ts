@@ -1,5 +1,7 @@
 export const FLOWKIT_TEMPORAL_VERSION = '0.1.0';
 
+export { createFlowkitTemporalRuntime } from './consumer-runtime';
+
 export {
   canonicalizeJson,
   hashCanonicalJson,

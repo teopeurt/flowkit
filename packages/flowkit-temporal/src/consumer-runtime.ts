@@ -1,0 +1,55 @@
+import type { FlowRuntime } from '@flowkit/consumer';
+import type { FlowCommand } from '@flowkit/core';
+
+import type {
+  FlowkitStateView,
+  FlowkitWorkflowInput,
+} from './contracts';
+import type { FlowkitWorkflow } from './workflow';
+
+interface TemporalWorkflowHandle {
+  query(name: 'getState'): Promise<FlowkitStateView>;
+  executeUpdate(
+    name: 'applyAction',
+    options: { updateId: string; args: [FlowCommand] },
+  ): Promise<FlowkitStateView>;
+}
+
+interface TemporalRuntimeOptions {
+  client: {
+    workflow: {
+      start(
+        workflowType: FlowkitWorkflow,
+        options: {
+          taskQueue: string;
+          workflowId: string;
+          args: [FlowkitWorkflowInput];
+        },
+      ): Promise<TemporalWorkflowHandle>;
+      getHandle(flowId: string): TemporalWorkflowHandle;
+    };
+  };
+  taskQueue: string;
+  workflowType: FlowkitWorkflow;
+  healthProbe(): Promise<{ ready: boolean; checkedAt: string }>;
+}
+
+export function createFlowkitTemporalRuntime(options: TemporalRuntimeOptions): FlowRuntime {
+  return {
+    async start(input) {
+      const handle = await options.client.workflow.start(options.workflowType, {
+        taskQueue: options.taskQueue,
+        workflowId: input.flowId,
+        args: [{ published: input.published, subject: input.subject }],
+      });
+
+      return handle.query('getState');
+    },
+    act: (input) => options.client.workflow.getHandle(input.flowId).executeUpdate('applyAction', {
+      updateId: input.operationId,
+      args: [{ action: input.action, actorId: input.actorId, comment: input.comment }],
+    }),
+    get: ({ flowId }) => options.client.workflow.getHandle(flowId).query('getState'),
+    health: () => options.healthProbe(),
+  };
+}
