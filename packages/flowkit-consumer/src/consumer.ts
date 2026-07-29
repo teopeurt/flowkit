@@ -53,6 +53,7 @@ export function createFlowkitConsumer(deps: ConsumerDependencies): FlowkitConsum
         const resolvedActor = await deps.actorResolver.resolve(actor.id);
         return deps.tasks.inbox({
           view: 'role_queue',
+          actorId: resolvedActor.id,
           roles: resolvedActor.roles,
           statuses: ['open', 'claimed'],
         });

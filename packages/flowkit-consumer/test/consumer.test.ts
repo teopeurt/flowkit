@@ -56,7 +56,12 @@ function fakeTasks(calls: string[]): TaskStore {
       return { task: { id: command.taskId } as FlowTask };
     },
     inbox: async (query: TaskInboxQuery) => {
-      expect(query).toMatchObject({ view: 'role_queue', roles: ['manager'], statuses: ['open', 'claimed'] });
+      expect(query).toMatchObject({
+        view: 'role_queue',
+        actorId: 'manager-server-id',
+        roles: ['manager'],
+        statuses: ['open', 'claimed'],
+      });
       calls.push('list:manager');
       return { items: [], nextCursor: null };
     },
