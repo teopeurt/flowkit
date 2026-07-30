@@ -1,0 +1,4 @@
+import type { RoleRegistry } from '../roles/registry';
+import type { PhonePolicy } from './phone-policy';
+export type BetterAuthFactoryOptions = { database: unknown; secret: string; baseURL: string; basePath?: string; trustedOrigins: readonly string[]; roleRegistry: RoleRegistry<any>; phonePolicy?: PhonePolicy; environment?: 'development' | 'test' | 'production'; enabled?: boolean };
+export function validateBetterAuthOptions(options: BetterAuthFactoryOptions) { if (!options.secret.trim() || options.secret.length < 32) throw new Error('BetterAuth secret must be at least 32 characters'); if (options.environment === 'production' && options.trustedOrigins.some(origin => origin.includes('localhost'))) throw new Error('Localhost trusted origins are not allowed in production'); return Object.freeze({ ...options, basePath: options.basePath ?? '/api/auth', enabled: options.enabled ?? true }); }

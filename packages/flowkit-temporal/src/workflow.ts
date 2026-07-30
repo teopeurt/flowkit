@@ -33,7 +33,12 @@ import { parseSlaDuration } from './validation';
 
 export interface FlowkitWorkflowConfig {
   registries: FlowkitPureRegistries;
-  activityTaskQueue: string;
+  /**
+   * Omit to run activities on the workflow's own task queue. A workflow module is imported inside
+   * the deterministic sandbox, where `process` does not exist, so a consumer that has to read this
+   * from the environment cannot configure it here.
+   */
+  activityTaskQueue?: string;
   activityOptions?: Parameters<typeof proxyActivities>[0];
   queryName?: string;
   updateName?: string;

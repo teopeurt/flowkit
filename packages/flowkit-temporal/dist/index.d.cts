@@ -1,7 +1,7 @@
 import { FlowRuntime } from '@flowkit/consumer';
 import { FlowCommand, FlowDefinition } from '@flowkit/core';
-import { F as FlowkitWorkflow, a as FlowkitWorkflowInput, b as FlowkitStateView, D as DefinitionHash, P as PublishedFlowDefinition, c as FlowkitPureRegistries, d as FlowkitDeclaredRefs } from './workflow-CVia-PJ6.cjs';
-export { C as CommandEnvelope, e as CommandOrigin, f as DefinitionIdentity, g as DispatchNotificationInput, E as EntryReason, h as ExecuteAiStepInput, i as ExecuteAiStepOutput, j as ExecuteSystemStepInput, k as ExecuteSystemStepOutput, m as FlowkitActivityRegistry, l as FlowkitActorRef, n as FlowkitExecutionState, o as FlowkitNotificationBinding, r as FlowkitRule, s as FlowkitRuleRegistration, p as FlowkitStepResult, q as FlowkitSubject, R as RecordStageReadyInput, t as RecordTransitionInput, u as RecordTransitionOutput, v as ResolveActionContextInput, w as ResolvedActionContext, x as RuleContext } from './workflow-CVia-PJ6.cjs';
+import { F as FlowkitWorkflow, a as FlowkitWorkflowInput, b as FlowkitStateView, D as DefinitionHash, P as PublishedFlowDefinition, c as FlowkitPureRegistries, d as FlowkitDeclaredRefs } from './workflow-C8luK4HL.cjs';
+export { C as CommandEnvelope, e as CommandOrigin, f as DefinitionIdentity, g as DispatchNotificationInput, E as EntryReason, h as ExecuteAiStepInput, i as ExecuteAiStepOutput, j as ExecuteSystemStepInput, k as ExecuteSystemStepOutput, m as FlowkitActivityRegistry, l as FlowkitActorRef, n as FlowkitExecutionState, o as FlowkitNotificationBinding, r as FlowkitRule, s as FlowkitRuleRegistration, p as FlowkitStepResult, q as FlowkitSubject, R as RecordStageReadyInput, t as RecordTransitionInput, u as RecordTransitionOutput, v as ResolveActionContextInput, w as ResolvedActionContext, x as RuleContext } from './workflow-C8luK4HL.cjs';
 import '@temporalio/workflow';
 
 interface TemporalWorkflowHandle {
@@ -11,10 +11,16 @@ interface TemporalWorkflowHandle {
         args: [FlowCommand];
     }): Promise<FlowkitStateView>;
 }
+/**
+ * A runtime resolves a workflow by its registered type name. A workflow value produced by a
+ * factory such as `createFlowkitWorkflow` is anonymous, so the runtime cannot derive a name from
+ * it; consumers that register their workflow as a module export must pass that export's name.
+ */
+type FlowkitWorkflowType = FlowkitWorkflow | string;
 interface TemporalRuntimeOptions {
     client: {
         workflow: {
-            start(workflowType: FlowkitWorkflow, options: {
+            start(workflowType: FlowkitWorkflowType, options: {
                 taskQueue: string;
                 workflowId: string;
                 args: [FlowkitWorkflowInput];
@@ -23,7 +29,7 @@ interface TemporalRuntimeOptions {
         };
     };
     taskQueue: string;
-    workflowType: FlowkitWorkflow;
+    workflowType: FlowkitWorkflowType;
     healthProbe(): Promise<{
         ready: boolean;
         checkedAt: string;

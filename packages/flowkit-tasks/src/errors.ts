@@ -1,0 +1,2 @@
+export type TaskErrorCode = 'task_not_found' | 'task_claim_conflict' | 'task_not_claimable' | 'task_not_owned' | 'task_role_ineligible' | 'maker_checker_conflict' | 'stale_task_revision' | 'invitation_invalid' | 'invitation_identity_mismatch' | 'idempotency_conflict';
+export class FlowkitTaskError extends Error { constructor(readonly code: TaskErrorCode, message: string) { super(message); this.name = 'FlowkitTaskError'; } }

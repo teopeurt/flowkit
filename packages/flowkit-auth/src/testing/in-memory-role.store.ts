@@ -1,0 +1,2 @@
+import type { RoleRecord, RoleStore, RoleUpsert } from '../contracts';
+export class InMemoryRoleStore implements RoleStore { private readonly roles = new Map<string, RoleRecord>(); private nextId = 1; async findByKey({ key }: { key: string }) { return this.roles.get(key); } async upsert(input: RoleUpsert) { const current = this.roles.get(input.key); const record = { ...input, id: current?.id ?? `role-${this.nextId++}` }; this.roles.set(input.key, record); return record; } async list() { return [...this.roles.values()]; } }

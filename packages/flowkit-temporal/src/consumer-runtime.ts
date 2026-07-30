@@ -15,11 +15,18 @@ interface TemporalWorkflowHandle {
   ): Promise<FlowkitStateView>;
 }
 
+/**
+ * A runtime resolves a workflow by its registered type name. A workflow value produced by a
+ * factory such as `createFlowkitWorkflow` is anonymous, so the runtime cannot derive a name from
+ * it; consumers that register their workflow as a module export must pass that export's name.
+ */
+type FlowkitWorkflowType = FlowkitWorkflow | string;
+
 interface TemporalRuntimeOptions {
   client: {
     workflow: {
       start(
-        workflowType: FlowkitWorkflow,
+        workflowType: FlowkitWorkflowType,
         options: {
           taskQueue: string;
           workflowId: string;
@@ -30,7 +37,7 @@ interface TemporalRuntimeOptions {
     };
   };
   taskQueue: string;
-  workflowType: FlowkitWorkflow;
+  workflowType: FlowkitWorkflowType;
   healthProbe(): Promise<{ ready: boolean; checkedAt: string }>;
 }
 

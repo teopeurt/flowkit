@@ -1,0 +1,11 @@
+import { SetMetadata, createParamDecorator, ExecutionContext } from '@nestjs/common';
+export const AUTH_ANONYMOUS = Symbol('flowkit:anonymous');
+export const AUTH_ROLES = Symbol('flowkit:roles');
+export const AUTH_PERMISSIONS = Symbol('flowkit:permissions');
+export const AUTH_READONLY_MUTATION = Symbol('flowkit:readonly-mutation');
+export const AllowAnonymous = () => SetMetadata(AUTH_ANONYMOUS, true);
+export const RequireRoles = (...roles: readonly string[]) => SetMetadata(AUTH_ROLES, roles);
+export const RequirePermissions = (...permissions: readonly string[]) => SetMetadata(AUTH_PERMISSIONS, permissions);
+export const AllowReadOnlyMutation = () => SetMetadata(AUTH_READONLY_MUTATION, true);
+export const CurrentPrincipal = createParamDecorator((_: unknown, context: ExecutionContext) => context.switchToHttp().getRequest().user);
+export const CurrentSession = createParamDecorator((_: unknown, context: ExecutionContext) => context.switchToHttp().getRequest().authSession);

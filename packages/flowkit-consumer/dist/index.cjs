@@ -69,11 +69,17 @@ function createFlowkitConsumer(deps) {
       },
       list: async ({ actor }) => {
         const resolvedActor = await deps.actorResolver.resolve(actor.id);
-        return deps.tasks.inbox({
+        const page = await deps.tasks.inbox({
           view: "role_queue",
+          actorId: resolvedActor.id,
           roles: resolvedActor.roles,
           statuses: ["open", "claimed"]
         });
+        const visible = await Promise.all(page.items.map(async (task) => {
+          if (task.status === "claimed") return task.assigneeId === resolvedActor.id;
+          return deps.eligibility.canWorkRole({ actorId: resolvedActor.id, role: task.role, task });
+        }));
+        return { ...page, items: page.items.filter((_, index) => visible[index]) };
       }
     }
   };
