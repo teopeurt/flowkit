@@ -1,0 +1,12 @@
+{
+  "name": "@naakwu/flowkit-workspace",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "typecheck": "bun run typecheck --workspaces",
+    "test": "bun run test --workspaces",
+    "build": "bun run build --workspaces",
+    "pack:check": "bun run scripts/pack-check.ts",
+    "version:check": "bun run scripts/check-lockstep-versions.ts"
+  }
+}
