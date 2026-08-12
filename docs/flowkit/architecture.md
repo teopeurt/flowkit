@@ -1,8 +1,8 @@
 # Flowkit — Architecture
 
-**Status:** Phase 1 in progress (in-place extraction inside this monorepo)
+**Status:** Phase 1 complete; Phase 4 FAAN operational adoption pending
 **Source design:** [`docs/superpowers/specs/2026-07-09-generic-workflow-framework-design.md`](../superpowers/specs/2026-07-09-generic-workflow-framework-design.md)
-**Live status tracker:** [`docs/TASKS.md`](../TASKS.md) (FLOWKIT-00 through FLOWKIT-11)
+**Live status tracker:** [`docs/TASKS.md`](../TASKS.md) (FLOWKIT-00 through FLOWKIT-12 and FLOWKIT-P4 items)
 **Vision / rationale:** [`vision.md`](./vision.md)
 
 This document describes how Flowkit is built: the package graph, the kernel's data model and
@@ -362,10 +362,10 @@ Each step is designed to land green on its own, with the FAAN app staying green 
 5. **`flowkit-auth`** — extract the BetterAuth foundation.
 6. **`flowkit-demo`** + per-package READMEs (what it does / how to use it / what it depends on).
 
-For where each step currently stands, see [`docs/TASKS.md`](../TASKS.md) (`FLOWKIT-00` through
-`FLOWKIT-11`) — as of the last recorded validation, steps 1–3 have passing package/backend suites
-and validated production Docker packaging, steps 4–5 are mid-rollout behind feature flags, and
-step 6 (`flowkit-demo`) has not started.
+All six extraction steps are complete. See [`docs/TASKS.md`](../TASKS.md) (`FLOWKIT-00` through
+`FLOWKIT-12`) for their validation record. Enabling the guarded integrations across FAAN
+environments, completing application cutovers, and draining legacy executions/queues are Phase 4
+operational adoption work, tracked separately as FLOWKIT-P4 items.
 
 ---
 
@@ -373,6 +373,8 @@ step 6 (`flowkit-demo`) has not started.
 
 - Template/starter repo (Phase 2).
 - Config-driven definition storage, definition-editing UI (Phase 3).
+- FAAN environment rollout, principal/global-guard and frontend-role cutovers, production
+  verification, and legacy workflow/queue drains (Phase 4).
 - Migrating `actor-core`, the EventBridge runtime, or the AWS runtime packages into the framework.
 - Frontend framework packages — the React apps keep consuming the backend API as-is.
 

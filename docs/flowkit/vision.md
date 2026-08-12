@@ -1,9 +1,9 @@
 # Flowkit — Vision
 
-**Status:** Phase 1 in progress (in-place extraction inside this monorepo)
+**Status:** Phase 1 complete; Phase 4 FAAN operational adoption pending
 **Working name:** `flowkit`, packages published as `@flowkit/*`
 **Source design:** [`docs/superpowers/specs/2026-07-09-generic-workflow-framework-design.md`](../superpowers/specs/2026-07-09-generic-workflow-framework-design.md)
-**Live status tracker:** [`docs/TASKS.md`](../TASKS.md) (FLOWKIT-00 through FLOWKIT-11) — treat this document as the "why," TASKS.md as the "how far along"
+**Live status tracker:** [`docs/TASKS.md`](../TASKS.md) (FLOWKIT-00 through FLOWKIT-12 and FLOWKIT-P4 items) — treat this document as the "why," TASKS.md as the "how far along"
 
 ---
 
@@ -37,20 +37,19 @@ proven kernel instead of a blank Temporal file.
 
 ## 3. Roadmap
 
-The framework is being built in three deliberate phases. Each phase changes *where* workflow
-definitions live, never *what guarantees the interpreter gives*.
+The framework and its FAAN adoption are organized into four deliberate phases. Phases 1–3 evolve
+the reusable product; Phase 4 tracks operational adoption in the source application separately.
 
 ```
-Phase 1 (now)       Phase 2 (later)              Phase 3 (later)
-extract reusable  → clone-and-customize        → config-driven engine:
-framework          starter/template repo          definitions loaded as
-packages in this                                  data (e.g. from a DB)
-monorepo
+Phase 1 (complete)    Phase 2 (later)        Phase 3 (later)       Phase 4 (planned)
+extract reusable   →  starter/template repo → config-driven     → FAAN production
+packages + prove                              definitions          adoption, cutover,
+with demo                                                        and legacy drains
 ```
 
 - **Phase 1 — extract in place.** Pull the workflow kernel, human task layer, notification
-  framework, and identity/RBAC foundation out of the ODC codebase into standalone packages, while
-  the FAAN app stays green at every step. This is the current phase; see §7 for status.
+  framework, and identity/RBAC foundation out of the ODC codebase into standalone packages, keep
+  the FAAN compatibility boundary green, and prove the packages with an independent demo. Complete.
 - **Phase 2 — starter repo.** A clone-and-customize template that a new team can fork to stand up
   their own workflow-heavy system on the same kernel. Not started; out of scope until Phase 1 is
   proven with a second, independent consumer (`flowkit-demo`).
@@ -58,15 +57,20 @@ monorepo
   loaded at runtime (for example, from a database), enabling non-engineers to author or edit
   workflows without a deploy. Out of scope for Phase 1, but every Phase 1 abstraction is required
   to point toward it (see §5).
+- **Phase 4 — FAAN operational adoption.** Enable the extracted Temporal, notification, task, and
+  authentication paths in FAAN environments; finish principal/global-guard and frontend role
+  cutovers; verify production behavior; and drain legacy workflows and queues. This operational
+  program is tracked separately and does not hold Phase 1 framework completion open.
 
 ## 4. Success bar
 
-Phase 1 is not "done" until both of these are true simultaneously:
+Phase 1 is complete only when both of these are true simultaneously:
 
-1. **FAAN e-vetting runs unchanged on the extracted packages.** The public workflow API
+1. **FAAN compatibility is proven at the code and test boundary.** The public workflow API
    (`getOdcWorkflowTransition`, `getNextOdcWorkflowActions`, `odcWorkflowAction`, `getApplicationState`,
    …) does not change for callers. Every `(stage, action)` pair is checked against a frozen,
    independent oracle of the legacy transition table so the migration cannot silently drift.
+   Environment enablement, production verification, and legacy drains belong to Phase 4.
 2. **A small demo workflow is built purely from the framework.** `flowkit-demo` is an independently
    authenticated leave-approval app that consumes all five packages through their public exports
    with no FAAN-specific code. It proves the kernel generalizes beyond the one system it was
@@ -74,6 +78,9 @@ Phase 1 is not "done" until both of these are true simultaneously:
 
 A framework that only the app it was extracted from can use is not a framework — it is that app
 with extra layers. The demo consumer is what disqualifies that outcome.
+
+Both conditions were met: package and compatibility validation passed, and the independent demo
+was verified in Compose and in the live k3s deployment by August 12, 2026.
 
 ## 5. Design philosophy
 
@@ -142,12 +149,12 @@ built artifacts without reworking how consumers resolve them.
 ## 7. Current phase snapshot
 
 Phase 1 package-by-package status (`flowkit-core` → `flowkit-temporal` → `flowkit-notify` →
-`flowkit-tasks` → `flowkit-auth` → `flowkit-demo`) is tracked live in
-[`docs/TASKS.md`](../TASKS.md) under FLOWKIT-00 through FLOWKIT-11 — that file is the source of
-truth for what is Done, Partial, or Planned as of any given day, not this document. As of the last
-recorded validation pass, the kernel, Temporal interpreter, notification framework, and task layer
-have passing package/backend test suites and production Docker packaging validated; `flowkit-auth`
-is mid-cutover; `flowkit-demo` (the Phase 1 success-bar item in §4) has not started.
+`flowkit-tasks` → `flowkit-auth` → `flowkit-demo`) is tracked in
+[`docs/TASKS.md`](../TASKS.md) under FLOWKIT-00 through FLOWKIT-12. Phase 1 is complete: all five
+packages are implemented, the FAAN compatibility adapters and rollout controls exist, and the
+independent demo has passed browser validation in Compose and a live k3s deployment. Remaining
+FAAN environment enablement, cutovers, production verification, and legacy drains are tracked as
+FLOWKIT-P4 operational adoption work rather than incomplete package extraction.
 
 For the package boundaries, kernel data model, and interpreter mechanics behind this vision, see
 [`architecture.md`](./architecture.md).
