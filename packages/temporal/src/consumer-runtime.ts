@@ -1,5 +1,5 @@
-import type { FlowRuntime } from '@flowkit/consumer';
-import type { FlowCommand } from '@flowkit/core';
+import type { FlowRuntime } from '@naakwu/flowkit-consumer';
+import type { FlowCommand } from '@naakwu/flowkit-core';
 
 import type {
   FlowkitStateView,

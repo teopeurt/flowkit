@@ -1,4 +1,4 @@
-# `@flowkit/tasks`
+# `@naakwu/flowkit-tasks`
 
 Portable human-task lifecycle contracts for Flowkit consumers.
 

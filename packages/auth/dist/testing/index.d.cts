@@ -1,4 +1,4 @@
-import { a as RoleStore, b as RoleRecord, c as RoleUpsert, I as IdentityLinkStore, d as IdentityLink, e as IdentityProof, f as RoleDefinition } from '../registry-mLTfQxoY.cjs';
+import { a as RoleStore, b as RoleRecord, c as RoleUpsert, I as IdentityLinkStore, d as IdentityLink, e as IdentityProof, f as RoleDefinition } from '../contracts-CqPcJqVW.cjs';
 
 declare class InMemoryRoleStore implements RoleStore {
     private readonly roles;

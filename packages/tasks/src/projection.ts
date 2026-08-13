@@ -1,4 +1,4 @@
-import type { FlowDefinition } from '@flowkit/core';
+import type { FlowDefinition } from '@naakwu/flowkit-core';
 import type { FlowTask, TaskMutation, TaskProjectionInput, TaskProjectionPlan, TaskReference } from './contracts.js';
 
 function reference(input: TaskProjectionInput, stage: string, role: string): TaskReference {

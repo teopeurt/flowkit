@@ -24,12 +24,12 @@ __export(workflow_exports, {
 });
 module.exports = __toCommonJS(workflow_exports);
 var import_workflow = require("@temporalio/workflow");
-var import_core3 = require("@flowkit/core");
+var import_flowkit_core3 = require("@naakwu/flowkit-core");
 
 // src/snapshot.ts
 var import_sha2 = require("@noble/hashes/sha2.js");
 var import_utils = require("@noble/hashes/utils.js");
-var import_core = require("@flowkit/core");
+var import_flowkit_core = require("@naakwu/flowkit-core");
 var SnapshotError = class extends Error {
   constructor(message) {
     super(message);
@@ -127,14 +127,14 @@ function verifyPublishedDefinition(published) {
   if (actual !== definitionHash) {
     throw new SnapshotError("Definition snapshot does not match its content hash.");
   }
-  const parsed = import_core.flowSchema.safeParse(definitionSnapshot);
+  const parsed = import_flowkit_core.flowSchema.safeParse(definitionSnapshot);
   if (!parsed.success) {
     throw new SnapshotError("Definition snapshot fails schema validation.");
   }
 }
 
 // src/validation.ts
-var import_core2 = require("@flowkit/core");
+var import_flowkit_core2 = require("@naakwu/flowkit-core");
 var durationUnits = {
   ms: 1,
   s: 1e3,
@@ -164,10 +164,10 @@ var stateView = (execution, definition) => ({
   stepResults: execution.stepResults,
   slaDeadline: execution.slaDeadline,
   completed: execution.completed,
-  nextActions: execution.completed ? [] : (0, import_core3.getDeclaredActions)(definition, execution.state.stage)
+  nextActions: execution.completed ? [] : (0, import_flowkit_core3.getDeclaredActions)(definition, execution.state.stage)
 });
 var initialExecution = (input) => input.resume?.execution ?? {
-  state: input.initialState ?? (0, import_core3.buildInitialState)(input.published.definitionSnapshot),
+  state: input.initialState ?? (0, import_flowkit_core3.buildInitialState)(input.published.definitionSnapshot),
   sequence: 0,
   entryEpoch: 0,
   stepResults: {},
@@ -312,7 +312,7 @@ function createFlowkitWorkflow(config) {
           continue;
         }
         const command = envelope.origin === "human" && context.actor ? { ...envelope.command, actorId: context.actor.id } : envelope.command;
-        const outcome = (0, import_core3.transition)(definition, execution.state, command, {
+        const outcome = (0, import_flowkit_core3.transition)(definition, execution.state, command, {
           actor: context.actor,
           facts: context.facts,
           subject: input.subject.metadata,

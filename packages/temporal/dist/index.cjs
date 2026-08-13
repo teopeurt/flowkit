@@ -57,7 +57,7 @@ function createFlowkitTemporalRuntime(options) {
 // src/snapshot.ts
 var import_sha2 = require("@noble/hashes/sha2.js");
 var import_utils = require("@noble/hashes/utils.js");
-var import_core = require("@flowkit/core");
+var import_flowkit_core = require("@naakwu/flowkit-core");
 var SnapshotError = class extends Error {
   constructor(message) {
     super(message);
@@ -151,7 +151,7 @@ var deepFreeze = (value) => {
   return value;
 };
 function publishDefinition(args) {
-  const parsed = (0, import_core.defineFlow)(args.definition);
+  const parsed = (0, import_flowkit_core.defineFlow)(args.definition);
   const normalized = JSON.parse(JSON.stringify(parsed));
   const canonical = canonicalizeJson(normalized);
   const snapshot = deepFreeze(JSON.parse(canonical));
@@ -174,14 +174,14 @@ function verifyPublishedDefinition(published) {
   if (actual !== definitionHash) {
     throw new SnapshotError("Definition snapshot does not match its content hash.");
   }
-  const parsed = import_core.flowSchema.safeParse(definitionSnapshot);
+  const parsed = import_flowkit_core.flowSchema.safeParse(definitionSnapshot);
   if (!parsed.success) {
     throw new SnapshotError("Definition snapshot fails schema validation.");
   }
 }
 
 // src/validation.ts
-var import_core2 = require("@flowkit/core");
+var import_flowkit_core2 = require("@naakwu/flowkit-core");
 var FlowkitValidationError = class extends Error {
   constructor(issues) {
     super(issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"));
@@ -332,7 +332,7 @@ function validateFlowkit(args) {
       error instanceof Error ? error.message : "Definition hash verification failed."
     );
   }
-  const schema = import_core2.flowSchema.safeParse(args.published.definitionSnapshot);
+  const schema = import_flowkit_core2.flowSchema.safeParse(args.published.definitionSnapshot);
   if (!schema.success) {
     for (const issue of schema.error.issues) {
       pushIssue(
@@ -344,7 +344,7 @@ function validateFlowkit(args) {
     }
     return issues;
   }
-  for (const issue of (0, import_core2.lintInterpreterFlow)(schema.data)) {
+  for (const issue of (0, import_flowkit_core2.lintInterpreterFlow)(schema.data)) {
     if (issue.severity === "error") {
       pushIssue(issues, issue.code, issue.path, issue.message);
     }

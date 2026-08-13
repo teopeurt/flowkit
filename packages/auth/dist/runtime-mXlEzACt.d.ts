@@ -1,4 +1,4 @@
-import { R as RoleRegistry, A as AuthResult } from './registry-mLTfQxoY.cjs';
+import { R as RoleRegistry, A as AuthResult } from './contracts-CqPcJqVW.js';
 
 type PhonePolicy = Readonly<{
     normalize(value: string): string;
@@ -34,6 +34,29 @@ declare function validateBetterAuthOptions(options: BetterAuthFactoryOptions): R
     environment?: "development" | "test" | "production";
 }>;
 
+type OtpIntent = {
+    readonly name: string;
+    readonly authorize: (input: {
+        identity: string;
+        context: Readonly<Record<string, unknown>>;
+    }) => Promise<{
+        allowed: boolean;
+        reason: string;
+    }> | {
+        allowed: boolean;
+        reason: string;
+    };
+};
+declare function createOtpIntentRegistry(intents: readonly OtpIntent[]): Readonly<{
+    authorize(input: {
+        intent: string;
+        identity: string;
+        context?: Readonly<Record<string, unknown>>;
+    }): Promise<AuthResult<{
+        reason: string;
+    }>>;
+}>;
+
 declare function createAuthRuntime(options: BetterAuthFactoryOptions): Readonly<{
     config: Readonly<{
         basePath: string;
@@ -61,27 +84,4 @@ declare function createAuthRuntime(options: BetterAuthFactoryOptions): Readonly<
 }>;
 declare const createBetterAuthRuntime: typeof createAuthRuntime;
 
-type OtpIntent = {
-    readonly name: string;
-    readonly authorize: (input: {
-        identity: string;
-        context: Readonly<Record<string, unknown>>;
-    }) => Promise<{
-        allowed: boolean;
-        reason: string;
-    }> | {
-        allowed: boolean;
-        reason: string;
-    };
-};
-declare function createOtpIntentRegistry(intents: readonly OtpIntent[]): Readonly<{
-    authorize(input: {
-        intent: string;
-        identity: string;
-        context?: Readonly<Record<string, unknown>>;
-    }): Promise<AuthResult<{
-        reason: string;
-    }>>;
-}>;
-
-export { type BetterAuthFactoryOptions as B, type OtpIntent as O, type PhonePolicy as P, createBetterAuthRuntime as a, createPhonePolicy as b, createAuthRuntime as c, createCustomPhonePolicy as d, createOtpIntentRegistry as e, validateBetterAuthOptions as v };
+export { type BetterAuthFactoryOptions as B, type OtpIntent as O, type PhonePolicy as P, createBetterAuthRuntime as a, createCustomPhonePolicy as b, createAuthRuntime as c, createOtpIntentRegistry as d, createPhonePolicy as e, validateBetterAuthOptions as v };

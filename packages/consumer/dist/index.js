@@ -1,5 +1,5 @@
 // src/consumer.ts
-import { claimTask } from "@flowkit/tasks";
+import { claimTask } from "@naakwu/flowkit-tasks";
 function toClaimCommand(input, actorId, now) {
   return {
     taskId: input.taskId,

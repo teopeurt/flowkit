@@ -1,7 +1,7 @@
-import { FlowRuntime } from '@flowkit/consumer';
-import { FlowCommand, FlowDefinition } from '@flowkit/core';
-import { F as FlowkitWorkflow, a as FlowkitWorkflowInput, b as FlowkitStateView, D as DefinitionHash, P as PublishedFlowDefinition, c as FlowkitPureRegistries, d as FlowkitDeclaredRefs } from './workflow-C8luK4HL.cjs';
-export { C as CommandEnvelope, e as CommandOrigin, f as DefinitionIdentity, g as DispatchNotificationInput, E as EntryReason, h as ExecuteAiStepInput, i as ExecuteAiStepOutput, j as ExecuteSystemStepInput, k as ExecuteSystemStepOutput, m as FlowkitActivityRegistry, l as FlowkitActorRef, n as FlowkitExecutionState, o as FlowkitNotificationBinding, r as FlowkitRule, s as FlowkitRuleRegistration, p as FlowkitStepResult, q as FlowkitSubject, R as RecordStageReadyInput, t as RecordTransitionInput, u as RecordTransitionOutput, v as ResolveActionContextInput, w as ResolvedActionContext, x as RuleContext } from './workflow-C8luK4HL.cjs';
+import { FlowRuntime } from '@naakwu/flowkit-consumer';
+import { FlowCommand, FlowDefinition } from '@naakwu/flowkit-core';
+import { F as FlowkitWorkflow, a as FlowkitWorkflowInput, b as FlowkitStateView, D as DefinitionHash, P as PublishedFlowDefinition, c as FlowkitPureRegistries, d as FlowkitDeclaredRefs } from './workflow-48LmBhbc.cjs';
+export { C as CommandEnvelope, e as CommandOrigin, f as DefinitionIdentity, g as DispatchNotificationInput, E as EntryReason, h as ExecuteAiStepInput, i as ExecuteAiStepOutput, j as ExecuteSystemStepInput, k as ExecuteSystemStepOutput, l as FlowkitActivityRegistry, m as FlowkitActorRef, n as FlowkitExecutionState, o as FlowkitNotificationBinding, p as FlowkitRule, q as FlowkitRuleRegistration, r as FlowkitStepResult, s as FlowkitSubject, R as RecordStageReadyInput, t as RecordTransitionInput, u as RecordTransitionOutput, v as ResolveActionContextInput, w as ResolvedActionContext, x as RuleContext } from './workflow-48LmBhbc.cjs';
 import '@temporalio/workflow';
 
 interface TemporalWorkflowHandle {

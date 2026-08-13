@@ -1,5 +1,5 @@
-import { FlowDefinition, FlowState } from '@flowkit/core';
-import { TaskStore, TaskEligibilityResolver, FlowTask, TaskInboxPage } from '@flowkit/tasks';
+import { FlowDefinition, FlowState } from '@naakwu/flowkit-core';
+import { TaskStore, TaskEligibilityResolver, FlowTask, TaskInboxPage } from '@naakwu/flowkit-tasks';
 
 type DefinitionHash = `sha256:${string}`;
 interface PublishedFlowDefinition {

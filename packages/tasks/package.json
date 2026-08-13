@@ -1,7 +1,8 @@
 {
-  "name": "@flowkit/tasks",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@naakwu/flowkit-tasks",
+  "version": "0.2.0",
+  "private": false,
+  "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
   "description": "Portable human task, inbox, claiming, and invitation contracts for Flowkit",
   "main": "./dist/index.cjs",
@@ -21,7 +22,7 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@flowkit/core": "file:../flowkit-core",
+    "@naakwu/flowkit-core": "workspace:^",
     "@noble/hashes": "^2.0.1",
     "zod": "^3.25.42"
   },

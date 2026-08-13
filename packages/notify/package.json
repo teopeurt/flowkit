@@ -1,7 +1,8 @@
 {
-  "name": "@flowkit/notify",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@naakwu/flowkit-notify",
+  "version": "0.2.0",
+  "private": false,
+  "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
   "description": "Portable notification planning and delivery runtime",
   "main": "./dist/index.cjs",

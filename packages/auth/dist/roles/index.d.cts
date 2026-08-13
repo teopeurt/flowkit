@@ -1,5 +1,5 @@
-import { R as RoleRegistry, a as RoleStore } from '../registry-mLTfQxoY.cjs';
-export { q as RoleCatalog, f as RoleDefinition, r as defineRoleRegistry } from '../registry-mLTfQxoY.cjs';
+import { R as RoleRegistry, a as RoleStore } from '../contracts-CqPcJqVW.cjs';
+export { q as RoleCatalog, f as RoleDefinition, r as defineRoleRegistry } from '../contracts-CqPcJqVW.cjs';
 
 type SynchronizationMode = 'insert_missing' | 'reconcile_metadata' | 'dry_run';
 type SynchronizationReport = {

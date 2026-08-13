@@ -1,5 +1,5 @@
-export { B as BetterAuthFactoryOptions, O as OtpIntent, P as PhonePolicy, c as createAuthRuntime, a as createBetterAuthRuntime, d as createCustomPhonePolicy, e as createOtpIntentRegistry, b as createPhonePolicy, v as validateBetterAuthOptions } from '../otp-intents-BosC-bSp.cjs';
-import '../registry-mLTfQxoY.cjs';
+export { B as BetterAuthFactoryOptions, O as OtpIntent, P as PhonePolicy, c as createAuthRuntime, a as createBetterAuthRuntime, b as createCustomPhonePolicy, d as createOtpIntentRegistry, e as createPhonePolicy, v as validateBetterAuthOptions } from '../runtime-DXxMRz5n.cjs';
+import '../contracts-CqPcJqVW.cjs';
 
 type AuthHook = (context: Readonly<Record<string, unknown>>) => void | Promise<void>;
 declare function composeAuthHooks(required: readonly AuthHook[], extensions?: readonly AuthHook[]): (context: Readonly<Record<string, unknown>>) => Promise<void>;

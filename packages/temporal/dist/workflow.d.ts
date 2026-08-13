@@ -1,3 +1,3 @@
 import '@temporalio/workflow';
-export { F as FlowkitWorkflow, y as FlowkitWorkflowConfig, z as createFlowkitWorkflow } from './workflow-C8luK4HL.js';
-import '@flowkit/core';
+export { F as FlowkitWorkflow, y as FlowkitWorkflowConfig, z as createFlowkitWorkflow } from './workflow-48LmBhbc.js';
+import '@naakwu/flowkit-core';

@@ -1,7 +1,8 @@
 {
-  "name": "@flowkit/temporal",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@naakwu/flowkit-temporal",
+  "version": "0.2.0",
+  "private": false,
+  "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
   "description": "Reusable Temporal interpreter for serialized Flowkit definitions",
   "main": "./dist/index.cjs",
@@ -28,8 +29,8 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@flowkit/consumer": "file:../flowkit-consumer",
-    "@flowkit/core": "file:../flowkit-core",
+    "@naakwu/flowkit-consumer": "workspace:^",
+    "@naakwu/flowkit-core": "workspace:^",
     "@noble/hashes": "^2.0.1",
     "@temporalio/workflow": "1.16.2"
   },

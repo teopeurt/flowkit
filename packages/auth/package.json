@@ -1,7 +1,8 @@
 {
-  "name": "@flowkit/auth",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@naakwu/flowkit-auth",
+  "version": "0.2.0",
+  "private": false,
+  "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
   "description": "Portable authentication, authorization, identity, and Nest integration",
   "main": "./dist/index.cjs",

@@ -1,5 +1,5 @@
-import { flowSchema, lintInterpreterFlow } from '@flowkit/core';
-import type { FlowDefinition } from '@flowkit/core';
+import { flowSchema, lintInterpreterFlow } from '@naakwu/flowkit-core';
+import type { FlowDefinition } from '@naakwu/flowkit-core';
 
 import type {
   FlowkitDeclaredRefs,

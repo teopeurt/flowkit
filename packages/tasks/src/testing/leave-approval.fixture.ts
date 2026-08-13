@@ -1,4 +1,4 @@
-import type { FlowDefinition } from '@flowkit/core';
+import type { FlowDefinition } from '@naakwu/flowkit-core';
 import { MemoryTaskStore } from './memory-task-store.js';
 import { planTaskProjection } from '../projection.js';
 

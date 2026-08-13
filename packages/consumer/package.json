@@ -1,7 +1,8 @@
 {
-  "name": "@flowkit/consumer",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@naakwu/flowkit-consumer",
+  "version": "0.2.0",
+  "private": false,
+  "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
   "description": "Engine-neutral consumer facade and runtime port for Flowkit",
   "main": "./dist/index.cjs",
@@ -21,8 +22,8 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@flowkit/core": "file:../flowkit-core",
-    "@flowkit/tasks": "file:../flowkit-tasks"
+    "@naakwu/flowkit-core": "workspace:^",
+    "@naakwu/flowkit-tasks": "workspace:^"
   },
   "devDependencies": {
     "@types/bun": "latest",

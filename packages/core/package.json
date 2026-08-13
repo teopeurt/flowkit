@@ -1,7 +1,8 @@
 {
-  "name": "@flowkit/core",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@naakwu/flowkit-core",
+  "version": "0.2.0",
+  "private": false,
+  "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
   "description": "Engine-agnostic workflow definitions and pure transition evaluation",
   "main": "./dist/index.cjs",

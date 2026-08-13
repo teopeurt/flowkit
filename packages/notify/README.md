@@ -1,4 +1,4 @@
-# `@flowkit/notify`
+# `@naakwu/flowkit-notify`
 
 Portable notification planning and delivery contracts for Flowkit consumers.
 

@@ -1,3 +1,30 @@
+type RoleDefinition = {
+    label: string;
+    description?: string;
+    aliases?: readonly string[];
+    permissions: readonly string[];
+    scopes: readonly string[];
+    kind: 'internal' | 'external' | 'system';
+    provisioning: 'self_service' | 'invite_only' | 'disabled';
+    readOnly?: boolean;
+    sessionTtlSeconds?: number;
+};
+type RoleCatalog = Record<string, RoleDefinition>;
+type RoleRegistry<C extends RoleCatalog> = Readonly<{
+    definitions: Readonly<C>;
+    normalizeRole(role: string): string | undefined;
+    getRole(role: string): RoleDefinition | undefined;
+    listRoles(): readonly string[];
+    hasPermission(role: string, permission: string): boolean;
+    supportsScope(role: string, scope: string): boolean;
+    isReadOnly(role: string): boolean;
+    canSelfProvision(role: string): boolean;
+    getSessionPolicy(role: string): {
+        readonly ttlSeconds?: number;
+    } | undefined;
+}>;
+declare function defineRoleRegistry<const C extends RoleCatalog>(catalog: C): RoleRegistry<C>;
+
 type AuthErrorCode = 'unauthenticated' | 'identity_unverified' | 'identity_not_found' | 'identity_collision' | 'identity_already_claimed' | 'provisioning_forbidden' | 'role_unknown' | 'scope_required' | 'scope_ambiguous' | 'permission_denied' | 'readonly_denied' | 'rate_limited' | 'configuration_invalid' | 'store_unavailable';
 declare class AuthError extends Error {
     readonly code: AuthErrorCode;
@@ -126,31 +153,4 @@ type AuthResult<T> = {
     readonly error: AuthError;
 };
 
-type RoleDefinition = {
-    label: string;
-    description?: string;
-    aliases?: readonly string[];
-    permissions: readonly string[];
-    scopes: readonly string[];
-    kind: 'internal' | 'external' | 'system';
-    provisioning: 'self_service' | 'invite_only' | 'disabled';
-    readOnly?: boolean;
-    sessionTtlSeconds?: number;
-};
-type RoleCatalog = Record<string, RoleDefinition>;
-type RoleRegistry<C extends RoleCatalog> = Readonly<{
-    definitions: Readonly<C>;
-    normalizeRole(role: string): string | undefined;
-    getRole(role: string): RoleDefinition | undefined;
-    listRoles(): readonly string[];
-    hasPermission(role: string, permission: string): boolean;
-    supportsScope(role: string, scope: string): boolean;
-    isReadOnly(role: string): boolean;
-    canSelfProvision(role: string): boolean;
-    getSessionPolicy(role: string): {
-        readonly ttlSeconds?: number;
-    } | undefined;
-}>;
-declare function defineRoleRegistry<const C extends RoleCatalog>(catalog: C): RoleRegistry<C>;
-
-export { type AuthResult as A, type DomainSubject as D, type IdentityLinkStore as I, type MembershipResolver as M, type OtpSender as O, type ProvisioningDecision as P, type RoleRegistry as R, type RoleStore as a, type RoleRecord as b, type RoleUpsert as c, type IdentityLink as d, type IdentityProof as e, type RoleDefinition as f, type ActiveScope as g, type AuthSession as h, type AuthAuditSink as i, type Membership as j, type AuthAuditEvent as k, type AuthClock as l, type AuthLogger as m, type IdentityRateLimiter as n, type AuthErrorCode as o, AuthError as p, type RoleCatalog as q, defineRoleRegistry as r };
+export { type AuthResult as A, type DomainSubject as D, type IdentityLinkStore as I, type MembershipResolver as M, type OtpSender as O, type ProvisioningDecision as P, type RoleRegistry as R, type RoleStore as a, type RoleRecord as b, type RoleUpsert as c, type IdentityLink as d, type IdentityProof as e, type RoleDefinition as f, type ActiveScope as g, type AuthSession as h, type AuthAuditSink as i, type AuthAuditEvent as j, type AuthClock as k, AuthError as l, type AuthErrorCode as m, type AuthLogger as n, type IdentityRateLimiter as o, type Membership as p, type RoleCatalog as q, defineRoleRegistry as r };

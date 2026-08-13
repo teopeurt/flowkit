@@ -1,7 +1,7 @@
 import {
   parseSlaDuration,
   verifyPublishedDefinition
-} from "./chunk-RAAHYPY6.js";
+} from "./chunk-PDJX3YVH.js";
 
 // src/workflow.ts
 import {
@@ -21,7 +21,7 @@ import {
   buildInitialState,
   getDeclaredActions,
   transition
-} from "@flowkit/core";
+} from "@naakwu/flowkit-core";
 var stateView = (execution, definition) => ({
   state: execution.state,
   sequence: execution.sequence,

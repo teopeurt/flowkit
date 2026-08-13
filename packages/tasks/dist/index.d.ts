@@ -1,4 +1,4 @@
-import { FlowDefinition, FlowState } from '@flowkit/core';
+import { FlowDefinition, FlowState } from '@naakwu/flowkit-core';
 import { z } from 'zod';
 
 type JsonPrimitive = string | number | boolean | null;

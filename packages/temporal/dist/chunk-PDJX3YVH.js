@@ -1,7 +1,7 @@
 // src/snapshot.ts
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { defineFlow, flowSchema } from "@flowkit/core";
+import { defineFlow, flowSchema } from "@naakwu/flowkit-core";
 var SnapshotError = class extends Error {
   constructor(message) {
     super(message);
@@ -125,7 +125,7 @@ function verifyPublishedDefinition(published) {
 }
 
 // src/validation.ts
-import { flowSchema as flowSchema2, lintInterpreterFlow } from "@flowkit/core";
+import { flowSchema as flowSchema2, lintInterpreterFlow } from "@naakwu/flowkit-core";
 var FlowkitValidationError = class extends Error {
   constructor(issues) {
     super(issues.map((issue) => `${issue.path}: ${issue.message}`).join("\n"));

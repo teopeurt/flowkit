@@ -15,8 +15,8 @@ import {
   buildInitialState,
   getDeclaredActions,
   transition,
-} from '@flowkit/core';
-import type { FlowCommand, FlowState } from '@flowkit/core';
+} from '@naakwu/flowkit-core';
+import type { FlowCommand, FlowState } from '@naakwu/flowkit-core';
 
 import type {
   CommandEnvelope,
@@ -27,7 +27,7 @@ import type {
   FlowkitWorkflowInput,
   EntryReason,
 } from './contracts';
-import type { TransitionRecord } from '@flowkit/core';
+import type { TransitionRecord } from '@naakwu/flowkit-core';
 import { verifyPublishedDefinition } from './snapshot';
 import { parseSlaDuration } from './validation';
 

@@ -25,7 +25,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/consumer.ts
-var import_tasks = require("@flowkit/tasks");
+var import_flowkit_tasks = require("@naakwu/flowkit-tasks");
 function toClaimCommand(input, actorId, now) {
   return {
     taskId: input.taskId,
@@ -61,7 +61,7 @@ function createFlowkitConsumer(deps) {
     tasks: {
       claim: async (input) => {
         const actor = await deps.actorResolver.resolve(input.actor.id);
-        return await (0, import_tasks.claimTask)({
+        return await (0, import_flowkit_tasks.claimTask)({
           store: deps.tasks,
           eligibility: deps.eligibility,
           command: toClaimCommand(input, actor.id, deps.clock.now())

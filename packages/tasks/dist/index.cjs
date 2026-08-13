@@ -57,7 +57,7 @@ var FlowkitTaskError = class extends Error {
   code;
 };
 
-// ../../node_modules/zod/dist/esm/v3/external.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -169,7 +169,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// ../../node_modules/zod/dist/esm/v3/helpers/util.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -303,7 +303,7 @@ var getParsedType = (data) => {
   }
 };
 
-// ../../node_modules/zod/dist/esm/v3/ZodError.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -403,8 +403,9 @@ var ZodError = class _ZodError extends Error {
     const formErrors = [];
     for (const sub of this.issues) {
       if (sub.path.length > 0) {
-        fieldErrors[sub.path[0]] = fieldErrors[sub.path[0]] || [];
-        fieldErrors[sub.path[0]].push(mapper(sub));
+        const firstEl = sub.path[0];
+        fieldErrors[firstEl] = fieldErrors[firstEl] || [];
+        fieldErrors[firstEl].push(mapper(sub));
       } else {
         formErrors.push(mapper(sub));
       }
@@ -420,7 +421,7 @@ ZodError.create = (issues) => {
   return error;
 };
 
-// ../../node_modules/zod/dist/esm/v3/locales/en.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/locales/en.js
 var errorMap = (issue, _ctx) => {
   let message;
   switch (issue.code) {
@@ -482,6 +483,8 @@ var errorMap = (issue, _ctx) => {
         message = `String must contain ${issue.exact ? "exactly" : issue.inclusive ? `at least` : `over`} ${issue.minimum} character(s)`;
       else if (issue.type === "number")
         message = `Number must be ${issue.exact ? `exactly equal to ` : issue.inclusive ? `greater than or equal to ` : `greater than `}${issue.minimum}`;
+      else if (issue.type === "bigint")
+        message = `Number must be ${issue.exact ? `exactly equal to ` : issue.inclusive ? `greater than or equal to ` : `greater than `}${issue.minimum}`;
       else if (issue.type === "date")
         message = `Date must be ${issue.exact ? `exactly equal to ` : issue.inclusive ? `greater than or equal to ` : `greater than `}${new Date(Number(issue.minimum))}`;
       else
@@ -521,7 +524,7 @@ var errorMap = (issue, _ctx) => {
 };
 var en_default = errorMap;
 
-// ../../node_modules/zod/dist/esm/v3/errors.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -530,7 +533,7 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// ../../node_modules/zod/dist/esm/v3/helpers/parseUtil.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
   const { data, path, errorMaps, issueData } = params;
   const fullPath = [...path, ...issueData.path || []];
@@ -640,14 +643,14 @@ var isDirty = (x) => x.status === "dirty";
 var isValid = (x) => x.status === "valid";
 var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-// ../../node_modules/zod/dist/esm/v3/helpers/errorUtil.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// ../../node_modules/zod/dist/esm/v3/types.js
+// ../../node_modules/.bun/zod@3.25.76/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
   constructor(parent, value, path, key2) {
     this._cachedPath = [];
@@ -1046,6 +1049,8 @@ function isValidJWT(jwt, alg) {
     return false;
   try {
     const [header] = jwt.split(".");
+    if (!header)
+      return false;
     const base64 = header.replace(/-/g, "+").replace(/_/g, "/").padEnd(header.length + (4 - header.length % 4) % 4, "=");
     const decoded = JSON.parse(atob(base64));
     if (typeof decoded !== "object" || decoded === null)
@@ -4194,33 +4199,56 @@ function evaluateMakerChecker(input) {
   return { allowed: true, reason: "allowed", makerId: event.actorId, factKey: input.rule.factKey };
 }
 
-// ../../node_modules/@noble/hashes/utils.js
+// ../../node_modules/.bun/@noble+hashes@2.3.0/node_modules/@noble/hashes/_u64.js
+var fromNumH = (n) => n / 2 ** 32 | 0;
+var fromNumL = (n) => n >>> 0;
+function setU64FromNum(view, byteOffset, n, isLE) {
+  const h = fromNumH(n);
+  const l = fromNumL(n);
+  view.setUint32(byteOffset, isLE ? l : h, isLE);
+  view.setUint32(byteOffset + 4, isLE ? h : l, isLE);
+}
+
+// ../../node_modules/.bun/@noble+hashes@2.3.0/node_modules/@noble/hashes/utils.js
 function isBytes(a) {
-  return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array";
+  return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array" && "BYTES_PER_ELEMENT" in a && a.BYTES_PER_ELEMENT === 1;
+}
+var atitle = (title) => title ? `"${title}" ` : "";
+function anumber(n, title = "") {
+  if (typeof n !== "number")
+    throw new TypeError(atitle(title) + "expected number, got " + typeof n);
+  if (!Number.isSafeInteger(n) || n < 0)
+    throw new RangeError(atitle(title) + "expected integer >= 0, got " + n);
+  return n;
 }
 function abytes(value, length, title = "") {
+  if (isBytes(value) && (length === void 0 || value.length === length))
+    return value;
+  if (length !== void 0)
+    anumber(length, "length");
   const bytes = isBytes(value);
-  const len = value?.length;
-  const needsLen = length !== void 0;
-  if (!bytes || needsLen && len !== length) {
-    const prefix = title && `"${title}" `;
-    const ofLen = needsLen ? ` of length ${length}` : "";
-    const got = bytes ? `length=${len}` : `type=${typeof value}`;
-    throw new Error(prefix + "expected Uint8Array" + ofLen + ", got " + got);
-  }
-  return value;
+  const ofLen = length !== void 0 ? ` of length ${length}` : "";
+  const got = bytes ? `length=${value.length}` : `type=${typeof value}`;
+  const message = atitle(title) + "expected Uint8Array" + ofLen + ", got " + got;
+  if (!bytes)
+    throw new TypeError(message);
+  throw new RangeError(message);
 }
+var aobject = (value, label) => {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError((label === "object" ? "" : `"${label}" `) + "expected object, got type=" + typeof value);
+};
 function aexists(instance, checkFinished = true) {
   if (instance.destroyed)
-    throw new Error("Hash instance has been destroyed");
+    throw new Error("hash was destroyed");
   if (checkFinished && instance.finished)
-    throw new Error("Hash#digest() has already been called");
+    throw new Error("digest() was already called");
 }
 function aoutput(out, instance) {
-  abytes(out, void 0, "digestInto() output");
+  abytes(out, void 0, "output");
   const min = instance.outputLen;
-  if (out.length < min) {
-    throw new Error('"digestInto() output" expected to be of length >=' + min);
+  if (!(out.length >= min)) {
+    throw new RangeError('"output" expected length >= ' + min);
   }
 }
 function clean(...arrays) {
@@ -4251,23 +4279,36 @@ function bytesToHex(bytes) {
 }
 function utf8ToBytes(str) {
   if (typeof str !== "string")
-    throw new Error("string expected");
+    throw new TypeError("string expected");
   return new Uint8Array(new TextEncoder().encode(str));
 }
+function checkOpts(defaults, opts, title = "opts") {
+  aobject(defaults, "defaults");
+  if (opts !== void 0)
+    aobject(opts, title);
+  const merged = Object.assign(defaults, opts);
+  return merged;
+}
 function createHasher(hashCons, info = {}) {
+  if (typeof hashCons !== "function")
+    throw new TypeError('"hashCons" expected function, got type=' + typeof hashCons);
+  info = checkOpts({}, info, "info");
   const hashC = (msg, opts) => hashCons(opts).update(msg).digest();
   const tmp = hashCons(void 0);
   hashC.outputLen = tmp.outputLen;
   hashC.blockLen = tmp.blockLen;
+  hashC.canXOF = tmp.canXOF;
   hashC.create = (opts) => hashCons(opts);
   Object.assign(hashC, info);
   return Object.freeze(hashC);
 }
 var oidNist = (suffix) => ({
+  // Current NIST hashAlgs suffixes used here fit in one DER subidentifier octet.
+  // Larger suffix values would need base-128 OID encoding and a different length byte.
   oid: Uint8Array.from([6, 9, 96, 134, 72, 1, 101, 3, 4, 2, suffix])
 });
 
-// ../../node_modules/@noble/hashes/_md.js
+// ../../node_modules/.bun/@noble+hashes@2.3.0/node_modules/@noble/hashes/_md.js
 function Chi(a, b, c) {
   return a & b ^ ~a & c;
 }
@@ -4277,6 +4318,7 @@ function Maj(a, b, c) {
 var HashMD = class {
   blockLen;
   outputLen;
+  canXOF = false;
   padOffset;
   isLE;
   // For partial updates less than block size
@@ -4299,24 +4341,28 @@ var HashMD = class {
     abytes(data);
     const { view, buffer, blockLen } = this;
     const len = data.length;
+    let processed = false;
     for (let pos = 0; pos < len; ) {
       const take = Math.min(blockLen - this.pos, len - pos);
       if (take === blockLen) {
         const dataView = createView(data);
         for (; blockLen <= len - pos; pos += blockLen)
           this.process(dataView, pos);
+        processed = true;
         continue;
       }
-      buffer.set(data.subarray(pos, pos + take), this.pos);
+      buffer.set(pos === 0 && take === len ? data : data.subarray(pos, pos + take), this.pos);
       this.pos += take;
       pos += take;
       if (this.pos === blockLen) {
         this.process(view, 0);
         this.pos = 0;
+        processed = true;
       }
     }
     this.length += data.length;
-    this.roundClean();
+    if (processed)
+      this.roundClean();
     return this;
   }
   digestInto(out) {
@@ -4326,23 +4372,20 @@ var HashMD = class {
     const { buffer, view, blockLen, isLE } = this;
     let { pos } = this;
     buffer[pos++] = 128;
-    clean(this.buffer.subarray(pos));
+    buffer.fill(0, pos);
     if (this.padOffset > blockLen - pos) {
       this.process(view, 0);
-      pos = 0;
+      buffer.fill(0);
     }
-    for (let i = pos; i < blockLen; i++)
-      buffer[i] = 0;
-    view.setBigUint64(blockLen - 8, BigInt(this.length * 8), isLE);
+    setU64FromNum(view, blockLen - 8, this.length * 8, isLE);
     this.process(view, 0);
-    const oview = createView(out);
+    this.roundClean();
+    const oview = out === buffer ? view : createView(out);
     const len = this.outputLen;
-    if (len % 4)
-      throw new Error("_sha2: outputLen must be aligned to 32bit");
     const outLen = len / 4;
     const state = this.get();
-    if (outLen > state.length)
-      throw new Error("_sha2: outputLen bigger than state");
+    if (len % 4 || outLen > state.length)
+      throw new Error("invalid outputLen");
     for (let i = 0; i < outLen; i++)
       oview.setUint32(4 * i, state[i], isLE);
   }
@@ -4353,15 +4396,13 @@ var HashMD = class {
     this.destroy();
     return res;
   }
-  _cloneInto(to) {
-    to ||= new this.constructor();
-    to.set(...this.get());
-    const { blockLen, buffer, length, finished, destroyed, pos } = this;
+  _cloneIntoMeta(to) {
+    const { buffer, length, finished, destroyed, pos } = this;
     to.destroyed = destroyed;
     to.finished = finished;
     to.length = length;
     to.pos = pos;
-    if (length % blockLen)
+    if (pos)
       to.buffer.set(buffer);
     return to;
   }
@@ -4380,7 +4421,7 @@ var SHA256_IV = /* @__PURE__ */ Uint32Array.from([
   1541459225
 ]);
 
-// ../../node_modules/@noble/hashes/sha2.js
+// ../../node_modules/.bun/@noble+hashes@2.3.0/node_modules/@noble/hashes/sha2.js
 var SHA256_K = /* @__PURE__ */ Uint32Array.from([
   1116352408,
   1899447441,
@@ -4449,8 +4490,28 @@ var SHA256_K = /* @__PURE__ */ Uint32Array.from([
 ]);
 var SHA256_W = /* @__PURE__ */ new Uint32Array(64);
 var SHA2_32B = class extends HashMD {
-  constructor(outputLen) {
+  // We cannot use array here since array allows indexing by variable
+  // which means optimizer/compiler cannot use registers.
+  // Numeric initializers matter: starting the fields as `undefined` changes
+  // V8's field representation and makes sha256 3x slower (measured).
+  A = 0;
+  B = 0;
+  C = 0;
+  D = 0;
+  E = 0;
+  F = 0;
+  G = 0;
+  H = 0;
+  constructor(outputLen, IV) {
     super(64, outputLen, 8, false);
+    this.A = IV[0] | 0;
+    this.B = IV[1] | 0;
+    this.C = IV[2] | 0;
+    this.D = IV[3] | 0;
+    this.E = IV[4] | 0;
+    this.F = IV[5] | 0;
+    this.G = IV[6] | 0;
+    this.H = IV[7] | 0;
   }
   get() {
     const { A, B, C, D, E, F, G, H } = this;
@@ -4466,6 +4527,10 @@ var SHA2_32B = class extends HashMD {
     this.F = F | 0;
     this.G = G | 0;
     this.H = H | 0;
+  }
+  _cloneInto(to) {
+    (to ||= new this.constructor()).set(...this.get());
+    return this._cloneIntoMeta(to);
   }
   process(view, offset) {
     for (let i = 0; i < 16; i++, offset += 4)
@@ -4506,23 +4571,14 @@ var SHA2_32B = class extends HashMD {
     clean(SHA256_W);
   }
   destroy() {
+    this.destroyed = true;
     this.set(0, 0, 0, 0, 0, 0, 0, 0);
     clean(this.buffer);
   }
 };
 var _SHA256 = class extends SHA2_32B {
-  // We cannot use array here since array allows indexing by variable
-  // which means optimizer/compiler cannot use registers.
-  A = SHA256_IV[0] | 0;
-  B = SHA256_IV[1] | 0;
-  C = SHA256_IV[2] | 0;
-  D = SHA256_IV[3] | 0;
-  E = SHA256_IV[4] | 0;
-  F = SHA256_IV[5] | 0;
-  G = SHA256_IV[6] | 0;
-  H = SHA256_IV[7] | 0;
   constructor() {
-    super(32);
+    super(32, SHA256_IV);
   }
 };
 var sha256 = /* @__PURE__ */ createHasher(
@@ -4731,8 +4787,3 @@ var FLOWKIT_TASKS_VERSION = "0.1.0";
   taskProjectionInputSchema,
   taskReferenceSchema
 });
-/*! Bundled license information:
-
-@noble/hashes/utils.js:
-  (*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) *)
-*/

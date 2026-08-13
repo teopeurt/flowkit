@@ -1,6 +1,6 @@
-# @flowkit/temporal
+# @naakwu/flowkit-temporal
 
-`@flowkit/temporal` runs a serialized Flowkit definition inside a Temporal Workflow.
+`@naakwu/flowkit-temporal` runs a serialized Flowkit definition inside a Temporal Workflow.
 
 ## Definition snapshots
 

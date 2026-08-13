@@ -1,4 +1,4 @@
-# `@flowkit/core`
+# `@naakwu/flowkit-core`
 
 Pure workflow-definition and transition kernel for flow-heavy systems.
 
@@ -39,7 +39,7 @@ Later packages are responsible for:
 ESM:
 
 ```ts
-import { buildInitialState, defineFlow, transition } from '@flowkit/core';
+import { buildInitialState, defineFlow, transition } from '@naakwu/flowkit-core';
 
 const reviewFlow = defineFlow({
   id: 'doc-review',
@@ -72,7 +72,7 @@ const outcome = transition(reviewFlow, state, { action: 'submit' });
 CommonJS:
 
 ```js
-const { buildInitialState, defineFlow, transition } = require('@flowkit/core');
+const { buildInitialState, defineFlow, transition } = require('@naakwu/flowkit-core');
 
 const flow = defineFlow({
   id: 'simple',
