@@ -1,3 +1,5 @@
+import { checkLockstepVersions } from "./check-lockstep-versions";
+
 export const flowKitPackages = [
   "@naakwu/flowkit-auth",
   "@naakwu/flowkit-consumer",
@@ -7,22 +9,27 @@ export const flowKitPackages = [
   "@naakwu/flowkit-temporal",
 ] as const;
 
-type Release = { name?: unknown; newVersion?: unknown };
-type ReleasePlan = { releases?: unknown };
+const initialReleaseVersion = "0.2.0";
+const flowKitPackageDirectories = ["auth", "consumer", "core", "notify", "tasks", "temporal"];
 
-export function validateReleasePlan(plan: ReleasePlan): string {
-  if (!Array.isArray(plan.releases)) {
-    throw new Error("Release plan must contain a releases array");
+type PublishRelease = { kind?: unknown; name?: unknown; version?: unknown };
+type PublishPlan = { version?: unknown; plan?: unknown };
+
+export function validateReleasePlan(
+  publishPlan: PublishPlan,
+  expectedVersion = initialReleaseVersion,
+): string {
+  if (publishPlan.version !== 1 || !Array.isArray(publishPlan.plan)) {
+    throw new Error("Release plan must be a Changesets publish plan");
   }
 
-  const releases = plan.releases as Release[];
-  const releaseNames = releases.map((release) => release.name);
-  if (releaseNames.some((name) => typeof name !== "string")) {
+  const releases = publishPlan.plan.flat() as PublishRelease[];
+  if (releases.some((release) => release.kind !== "publish" || typeof release.name !== "string")) {
     throw new Error("Release plan must include exactly the six FlowKit packages");
   }
 
   const expectedNames = new Set<string>(flowKitPackages);
-  const actualNames = new Set(releaseNames as string[]);
+  const actualNames = new Set(releases.map((release) => release.name as string));
   if (
     releases.length !== flowKitPackages.length ||
     actualNames.size !== flowKitPackages.length ||
@@ -32,22 +39,25 @@ export function validateReleasePlan(plan: ReleasePlan): string {
     throw new Error("Release plan must include exactly the six FlowKit packages");
   }
 
-  const releaseVersions = releases.map((release) => release.newVersion);
-  if (releaseVersions.some((version) => typeof version !== "string")) {
-    throw new Error("Release plan must use one shared target version");
+  if (releases.some((release) => release.version !== expectedVersion)) {
+    throw new Error(`Release plan must target ${expectedVersion}`);
   }
 
-  const targetVersions = new Set(releaseVersions as string[]);
-  if (targetVersions.size !== 1) {
-    throw new Error("Release plan must use one shared target version");
-  }
-
-  return targetVersions.values().next().value as string;
+  return expectedVersion;
 }
 
 if (import.meta.main) {
   const releasePlanPath = Bun.argv[2] ?? ".changeset/release-plan.json";
-  const releasePlan = JSON.parse(await Bun.file(releasePlanPath).text()) as ReleasePlan;
-  const targetVersion = validateReleasePlan(releasePlan);
+  const releasePlan = JSON.parse(await Bun.file(releasePlanPath).text()) as PublishPlan;
+  const manifests = await Promise.all(
+    flowKitPackageDirectories.map(async (directory) => {
+      const manifest = (await Bun.file(`packages/${directory}/package.json`).json()) as {
+        name: string;
+        version: string;
+      };
+      return manifest;
+    }),
+  );
+  const targetVersion = validateReleasePlan(releasePlan, checkLockstepVersions(manifests));
   console.log(`Release plan is valid: all FlowKit packages target ${targetVersion}`);
 }

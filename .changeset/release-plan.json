@@ -1,90 +1,55 @@
 {
-  "changesets": [
-    {
-      "releases": [
-        {
-          "name": "@naakwu/flowkit-auth",
-          "type": "patch"
-        },
-        {
-          "name": "@naakwu/flowkit-consumer",
-          "type": "patch"
-        },
-        {
-          "name": "@naakwu/flowkit-core",
-          "type": "patch"
-        },
-        {
-          "name": "@naakwu/flowkit-notify",
-          "type": "patch"
-        },
-        {
-          "name": "@naakwu/flowkit-tasks",
-          "type": "patch"
-        },
-        {
-          "name": "@naakwu/flowkit-temporal",
-          "type": "patch"
-        }
-      ],
-      "summary": "Prepare the initial lockstep FlowKit release.",
-      "id": "phase-2-initial-release"
-    }
-  ],
-  "releases": [
-    {
-      "name": "@naakwu/flowkit-auth",
-      "type": "patch",
-      "oldVersion": "0.2.0",
-      "changesets": [
-        "phase-2-initial-release"
-      ],
-      "newVersion": "0.2.1"
-    },
-    {
-      "name": "@naakwu/flowkit-consumer",
-      "type": "patch",
-      "oldVersion": "0.2.0",
-      "changesets": [
-        "phase-2-initial-release"
-      ],
-      "newVersion": "0.2.1"
-    },
-    {
-      "name": "@naakwu/flowkit-core",
-      "type": "patch",
-      "oldVersion": "0.2.0",
-      "changesets": [
-        "phase-2-initial-release"
-      ],
-      "newVersion": "0.2.1"
-    },
-    {
-      "name": "@naakwu/flowkit-notify",
-      "type": "patch",
-      "oldVersion": "0.2.0",
-      "changesets": [
-        "phase-2-initial-release"
-      ],
-      "newVersion": "0.2.1"
-    },
-    {
-      "name": "@naakwu/flowkit-tasks",
-      "type": "patch",
-      "oldVersion": "0.2.0",
-      "changesets": [
-        "phase-2-initial-release"
-      ],
-      "newVersion": "0.2.1"
-    },
-    {
-      "name": "@naakwu/flowkit-temporal",
-      "type": "patch",
-      "oldVersion": "0.2.0",
-      "changesets": [
-        "phase-2-initial-release"
-      ],
-      "newVersion": "0.2.1"
-    }
+  "version": 1,
+  "plan": [
+    [
+      {
+        "kind": "publish",
+        "name": "@naakwu/flowkit-auth",
+        "version": "0.2.0",
+        "access": "restricted",
+        "tag": "latest"
+      },
+      {
+        "kind": "publish",
+        "name": "@naakwu/flowkit-core",
+        "version": "0.2.0",
+        "access": "restricted",
+        "tag": "latest"
+      },
+      {
+        "kind": "publish",
+        "name": "@naakwu/flowkit-notify",
+        "version": "0.2.0",
+        "access": "restricted",
+        "tag": "latest"
+      }
+    ],
+    [
+      {
+        "kind": "publish",
+        "name": "@naakwu/flowkit-tasks",
+        "version": "0.2.0",
+        "access": "restricted",
+        "tag": "latest"
+      }
+    ],
+    [
+      {
+        "kind": "publish",
+        "name": "@naakwu/flowkit-consumer",
+        "version": "0.2.0",
+        "access": "restricted",
+        "tag": "latest"
+      }
+    ],
+    [
+      {
+        "kind": "publish",
+        "name": "@naakwu/flowkit-temporal",
+        "version": "0.2.0",
+        "access": "restricted",
+        "tag": "latest"
+      }
+    ]
   ]
 }
