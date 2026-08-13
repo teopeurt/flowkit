@@ -45,7 +45,7 @@ import { join } from "node:path";
 const captureDirectory = process.env.FLOWKIT_CANDIDATE_TEST_CAPTURE;
 if (!captureDirectory) throw new Error("FLOWKIT_CANDIDATE_TEST_CAPTURE is required");
 const command = process.argv[2];
-appendFileSync(join(captureDirectory, "commands.log"), `${command}\n`);
+appendFileSync(join(captureDirectory, "commands.log"), `${command}:${process.env.FLOWKIT_DEMO_CANDIDATE_TARBALLS ?? ""}\n`);
 copyFileSync("package.json", join(captureDirectory, `${command}.package.json`));
 JS
 
@@ -109,7 +109,7 @@ if (capturedManifest.dependencies.zod !== "3.25.76") {
 }
 JS
 
-expected_commands=$'typecheck\ntest\nbuild\nstack:ci'
+expected_commands=$'typecheck:\ntest:true\nbuild:\nstack:ci:'
 if [[ "$(cat "$capture_directory/commands.log")" != "$expected_commands" ]]; then
   printf 'unexpected demo command sequence:\n%s\n' "$(cat "$capture_directory/commands.log")" >&2
   exit 1

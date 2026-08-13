@@ -82,6 +82,6 @@ cd "$temporary_demo"
 bun install --lockfile-only
 bun install --frozen-lockfile
 bun run typecheck
-bun run test
+FLOWKIT_DEMO_CANDIDATE_TARBALLS=true bun run test
 bun run build
 bun run stack:ci
