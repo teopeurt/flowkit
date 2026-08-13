@@ -8,8 +8,8 @@ This repository is Apache-2.0 licensed source. During Phase 2, packages install 
 ```text
 @naakwu/flowkit-core       definition and transition kernel
 ├── @naakwu/flowkit-tasks     task projections and claims
-├── @naakwu/flowkit-consumer  consumer integration contracts
-└── @naakwu/flowkit-temporal  Temporal runtime (also uses consumer)
+│   └── @naakwu/flowkit-consumer  consumer integration contracts (also uses core)
+└── @naakwu/flowkit-temporal  Temporal runtime (uses core and consumer)
 @naakwu/flowkit-notify     notification planning and delivery contracts
 @naakwu/flowkit-auth       authentication and authorization contracts
 ```

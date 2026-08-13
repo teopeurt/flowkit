@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -28,32 +28,32 @@ function typescriptQuickstarts(markdown: string): string[] {
   return [...markdown.matchAll(/```(?:ts|typescript)\s*\n([\s\S]*?)```/g)].map((match) => match[1]);
 }
 
-const documentedImports = new Map<string, Set<string>>([
-  ['@naakwu/flowkit-auth/roles', new Set(['defineRoleRegistry'])],
-  ['@naakwu/flowkit-consumer', new Set(['createFlowkitConsumer'])],
-  ['@naakwu/flowkit-core', new Set(['buildInitialState', 'defineFlow', 'transition'])],
-  ['@naakwu/flowkit-notify', new Set(['createTemplateRegistry', 'planNotification'])],
-  ['@naakwu/flowkit-tasks', new Set(['MemoryTaskStore', 'planTaskProjection'])],
-  ['@naakwu/flowkit-temporal', new Set(['publishDefinition'])],
-  ['@naakwu/flowkit-temporal/workflow', new Set(['createFlowkitWorkflow'])],
-]);
+async function run(command: string[], cwd: string): Promise<void> {
+  const process = Bun.spawn(command, { cwd, stdout: 'pipe', stderr: 'pipe' });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(process.stdout).text(),
+    new Response(process.stderr).text(),
+    process.exited,
+  ]);
+  if (exitCode !== 0) throw new Error(`${command.join(' ')} failed:\n${stdout}${stderr}`);
+}
 
-function declarationFixture(source: string): string {
-  const modules = new Map<string, Set<string>>();
-  for (const match of source.matchAll(/import\s*{([^}]+)}\s*from\s*['"]([^'"]+)['"]/g)) {
-    const allowedExports = documentedImports.get(match[2]);
-    if (!allowedExports) throw new Error(`quickstart imports unsupported entry point ${match[2]}`);
-    const exports = modules.get(match[2]) ?? new Set<string>();
-    for (const item of match[1].split(',')) {
-      const name = item.trim().split(/\s+as\s+/)[0];
-      if (!allowedExports.has(name)) throw new Error(`quickstart imports undocumented export ${name} from ${match[2]}`);
-      if (name) exports.add(name);
-    }
-    modules.set(match[2], exports);
-  }
-  return [...modules.entries()]
-    .map(([specifier, exports]) => `declare module '${specifier}' { ${[...exports].map((name) => `export const ${name}: any;`).join(' ')} }`)
-    .join('\n');
+async function packLocalPackages(destination: string): Promise<Array<{ name: string; tarball: string }>> {
+  await run(['bun', 'run', 'build'], repositoryRoot);
+  const directories = (await readdir(join(repositoryRoot, 'packages'), { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+  return Promise.all(directories.map(async (directory) => {
+    const packageDirectory = join(repositoryRoot, 'packages', directory);
+    const manifest = JSON.parse(await readFile(join(packageDirectory, 'package.json'), 'utf8')) as { name: string };
+    const packageDestination = join(destination, directory);
+    await mkdir(packageDestination, { recursive: true });
+    await run(['bun', 'pm', 'pack', '--destination', packageDestination], packageDirectory);
+    const tarballs = (await readdir(packageDestination)).filter((path) => path.endsWith('.tgz'));
+    if (tarballs.length !== 1) throw new Error(`${manifest.name} produced ${tarballs.length} tarballs`);
+    return { name: manifest.name, tarball: join(packageDestination, tarballs[0]) };
+  }));
 }
 
 afterAll(async () => {
@@ -86,25 +86,38 @@ describe('public documentation contract', () => {
     for (const name of packageNames) expect(rootReadme).toContain(name);
   });
 
-  test('compiles every TypeScript quickstart in an isolated consumer fixture', async () => {
+  test('documents every declared internal package dependency', async () => {
+    const documentation = await Promise.all(['docs/package-contracts.md', 'docs/architecture.md'].map(readDocumentation));
+    const renderedGraph = documentation.join('\n');
+    const packageDirectories = await readdir(join(repositoryRoot, 'packages'), { withFileTypes: true });
+    for (const entry of packageDirectories.filter((candidate) => candidate.isDirectory())) {
+      const manifest = JSON.parse(await readFile(join(repositoryRoot, 'packages', entry.name, 'package.json'), 'utf8')) as {
+        name: string;
+        dependencies?: Record<string, string>;
+      };
+      for (const dependency of Object.keys(manifest.dependencies ?? {}).filter((name) => name.startsWith('@naakwu/flowkit-'))) {
+        expect(renderedGraph).toContain(`${dependency} → ${manifest.name}`);
+      }
+    }
+  });
+
+  test('compiles every TypeScript quickstart against locally packed package declarations', async () => {
     const quickstarts = (await Promise.all((await documentationPaths()).map(readDocumentation)))
       .flatMap(typescriptQuickstarts);
     expect(quickstarts.length).toBeGreaterThan(0);
     const directory = await mkdtemp(join(tmpdir(), 'flowkit-docs-consumer-'));
     temporaryDirectories.push(directory);
-    const source = quickstarts.join('\n\n');
-    await writeFile(join(directory, 'quickstart.ts'), source);
-    // This fixture is intentionally type-only: private packages cannot be installed by an
-    // arbitrary temporary consumer. Its explicit module/export map mirrors the manifest-verified
-    // imports above, so the copied snippets prove their import syntax and public API names without
-    // relying on unpublished package resolution.
-    await writeFile(join(directory, 'flowkit-fixture.d.ts'), declarationFixture(source));
+    const packages = await packLocalPackages(join(directory, 'tarballs'));
+    const dependencies = Object.fromEntries(packages.map(({ name, tarball }) => [name, `file:${tarball}`]));
+    await writeFile(join(directory, 'package.json'), JSON.stringify({
+      name: 'flowkit-documentation-consumer', private: true, type: 'module', dependencies, overrides: dependencies,
+    }, null, 2));
+    await run(['bun', 'install', '--offline', '--ignore-scripts'], directory);
+    await writeFile(join(directory, 'quickstart.ts'), quickstarts.join('\n\n'));
     await writeFile(join(directory, 'tsconfig.json'), JSON.stringify({
       compilerOptions: { target: 'ES2022', module: 'ESNext', moduleResolution: 'bundler', strict: true, noEmit: true, skipLibCheck: true },
-      files: ['quickstart.ts', 'flowkit-fixture.d.ts'],
+      files: ['quickstart.ts'],
     }));
-    const compiler = Bun.spawn(['bun', 'x', 'tsc', '--project', 'tsconfig.json'], { cwd: directory, stdout: 'pipe', stderr: 'pipe' });
-    const [stdout, stderr, exitCode] = await Promise.all([new Response(compiler.stdout).text(), new Response(compiler.stderr).text(), compiler.exited]);
-    expect(exitCode, `${stdout}${stderr}`).toBe(0);
-  });
+    await run(['bun', 'x', '--offline', 'tsc', '--project', 'tsconfig.json'], directory);
+  }, 60_000);
 });

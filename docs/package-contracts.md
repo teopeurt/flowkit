@@ -11,6 +11,14 @@ Only the entry points declared in each package's `package.json` `exports` map ar
 | `@naakwu/flowkit-notify` | `.` | Notification templates, planning, adapters, delivery runtime, and testing helpers. |
 | `@naakwu/flowkit-auth` | `.`, `./roles`, `./better-auth`, `./nest`, `./testing` | Auth contracts plus explicit role, Better Auth, Nest, and testing integrations. |
 
-The dependency graph is `core → tasks`, `core → consumer`, and `core + consumer → temporal`; `notify` and `auth` are independent. Refer to the individual READMEs for usage. Every package emits ESM, CommonJS, and declaration artifacts under `dist/`.
+The declared internal dependency edges (dependency → dependent) are:
+
+- `@naakwu/flowkit-core → @naakwu/flowkit-tasks`
+- `@naakwu/flowkit-core → @naakwu/flowkit-consumer`
+- `@naakwu/flowkit-tasks → @naakwu/flowkit-consumer`
+- `@naakwu/flowkit-core → @naakwu/flowkit-temporal`
+- `@naakwu/flowkit-consumer → @naakwu/flowkit-temporal`
+
+`@naakwu/flowkit-notify` and `@naakwu/flowkit-auth` have no declared FlowKit package dependency. Refer to the individual READMEs for usage. Every package emits ESM, CommonJS, and declaration artifacts under `dist/`.
 
 Phase 2 packages are private GitHub Packages. They require a `read:packages` token and repository access. Public npm publication is planned for Phase 4.
