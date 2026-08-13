@@ -35,6 +35,9 @@ jobs:
       - name: Test demo candidate isolation
         run: bash scripts/test-demo-candidate.test.sh
 
+      - name: Test release workflow contract
+        run: bash scripts/test-release-workflow.test.sh
+
       - name: Build
         run: bun run build
 
