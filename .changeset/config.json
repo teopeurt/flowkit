@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@naakwu/flowkit-auth",
+      "@naakwu/flowkit-consumer",
+      "@naakwu/flowkit-core",
+      "@naakwu/flowkit-notify",
+      "@naakwu/flowkit-tasks",
+      "@naakwu/flowkit-temporal"
+    ]
+  ],
+  "linked": [],
+  "access": "restricted",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}
