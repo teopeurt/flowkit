@@ -86,6 +86,15 @@ describe('public documentation contract', () => {
     for (const name of packageNames) expect(rootReadme).toContain(name);
   });
 
+  test('gives Yarn Berry its npmScopes registry configuration', async () => {
+    const rootReadme = await readDocumentation('README.md');
+    expect(rootReadme).toContain('Yarn Berry');
+    expect(rootReadme).toContain('npmScopes:');
+    expect(rootReadme).toContain('naakwu:');
+    expect(rootReadme).toContain('npmRegistryServer: "https://npm.pkg.github.com"');
+    expect(rootReadme).toContain('npmAuthToken: "${GITHUB_PACKAGES_TOKEN}"');
+  });
+
   test('documents every declared internal package dependency', async () => {
     const documentation = await Promise.all(['docs/package-contracts.md', 'docs/architecture.md'].map(readDocumentation));
     const renderedGraph = documentation.join('\n');

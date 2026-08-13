@@ -20,7 +20,7 @@ See [package contracts](docs/package-contracts.md) and the [architecture](docs/a
 
 You need a GitHub Packages token with `read:packages` and access to the private repository that hosts these packages. Keep the token in your package-manager configuration or environment; never commit it.
 
-Copy [`.npmrc.example`](.npmrc.example) to your user-level or project-level npm configuration, set `GITHUB_PACKAGES_TOKEN` in your shell or CI secret store, then install with the package manager you use:
+For npm, pnpm, Bun, and Yarn Classic, copy [`.npmrc.example`](.npmrc.example) to your user-level or project-level npm configuration, set `GITHUB_PACKAGES_TOKEN` in your shell or CI secret store, then install:
 
 ```sh
 npm install @naakwu/flowkit-core
@@ -29,7 +29,17 @@ yarn add @naakwu/flowkit-core
 bun add @naakwu/flowkit-core
 ```
 
-The registry configuration is npm-compatible, so it applies to npm, pnpm, Yarn, and Bun.
+For Yarn Berry (v2+), configure the scope in `.yarnrc.yml` instead of relying on `.npmrc`:
+
+```yml
+npmScopes:
+  naakwu:
+    npmRegistryServer: "https://npm.pkg.github.com"
+    npmAlwaysAuth: true
+    npmAuthToken: "${GITHUB_PACKAGES_TOKEN}"
+```
+
+Then run `yarn add @naakwu/flowkit-core`. Keep the token in your shell, CI secret store, or Yarn-supported environment configuration; do not commit it.
 
 ## Develop locally
 
