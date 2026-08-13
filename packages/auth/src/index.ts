@@ -1,4 +1,4 @@
-export const FLOWKIT_AUTH_VERSION = '0.1.0';
+export const FLOWKIT_AUTH_VERSION = '0.2.0';
 export * from './contracts';
 export * from './config';
 export * from './errors';

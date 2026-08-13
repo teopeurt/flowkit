@@ -375,7 +375,7 @@ function createOtpIntentRegistry(intents) {
 __name(createOtpIntentRegistry, "createOtpIntentRegistry");
 
 // src/index.ts
-var FLOWKIT_AUTH_VERSION = "0.1.0";
+var FLOWKIT_AUTH_VERSION = "0.2.0";
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   AuthError,

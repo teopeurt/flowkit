@@ -4759,7 +4759,7 @@ function leaveTransitionPlan(input) {
 }
 
 // src/index.ts
-var FLOWKIT_TASKS_VERSION = "0.1.0";
+var FLOWKIT_TASKS_VERSION = "0.2.0";
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   FLOWKIT_TASKS_VERSION,

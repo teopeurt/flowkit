@@ -63,6 +63,6 @@ declare function resolvePrincipal(input: {
     audit?: AuthAuditSink;
 }): Promise<AuthenticatedPrincipal>;
 
-declare const FLOWKIT_AUTH_VERSION = "0.1.0";
+declare const FLOWKIT_AUTH_VERSION = "0.2.0";
 
 export { ActiveScope, AuthAuditSink, type AuthConfig, AuthSession, type AuthenticatedPrincipal, FLOWKIT_AUTH_VERSION, IdentityLinkStore, IdentityProof, MembershipResolver, ProvisioningDecision, RoleRegistry, authConfigSchema, freezePrincipal, parseAuthConfig, provisionIdentity, resolvePrincipal, verifiedProofs };

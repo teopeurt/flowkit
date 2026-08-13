@@ -88,6 +88,6 @@ declare function assertValidFlowkit(args: {
     registries: FlowkitValidationRegistries;
 }): void;
 
-declare const FLOWKIT_TEMPORAL_VERSION = "0.1.0";
+declare const FLOWKIT_TEMPORAL_VERSION = "0.2.0";
 
 export { DefinitionHash, FLOWKIT_TEMPORAL_VERSION, FlowkitDeclaredRefs, FlowkitPureRegistries, FlowkitStateView, FlowkitValidationError, type FlowkitValidationIssue, type FlowkitValidationRegistries, FlowkitWorkflowInput, PublishedFlowDefinition, SnapshotError, assertValidFlowkit, canonicalizeJson, createFlowkitTemporalRuntime, hashCanonicalJson, parseSlaDuration, publishDefinition, validateFlowkit, verifyPublishedDefinition };

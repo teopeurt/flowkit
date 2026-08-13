@@ -71,7 +71,7 @@ declare const leaveApprovalFixture: Readonly<{
     } | undefined;
 }>;
 
-declare const testingContractVersion = "0.1.0";
+declare const testingContractVersion = "0.2.0";
 declare function createTestClock(initial?: Date): {
     now: () => Date;
     advance: (milliseconds: number) => void;

@@ -104,6 +104,24 @@ export function runtimeSpecifiers(manifest: Pick<PackageManifest, 'name' | 'expo
   });
 }
 
+export function assertPublicVersionExports(
+  manifest: Pick<PackageManifest, 'name' | 'version'>,
+  specifier: string,
+  moduleExports: Record<string, unknown>,
+): void {
+  for (const [exportName, exportedValue] of Object.entries(moduleExports)) {
+    if (
+      /version$/i.test(exportName) &&
+      typeof exportedValue === 'string' &&
+      exportedValue !== manifest.version
+    ) {
+      throw new Error(
+        `${specifier} exports ${exportName}=${exportedValue}; expected ${manifest.name}@${manifest.version}`,
+      );
+    }
+  }
+}
+
 export function createConsumerManifest(packages: ConsumerPackageInput[]) {
   const dependencies = Object.fromEntries(
     packages.map(({ manifest, tarballPath }) => [manifest.name, `file:${tarballPath}`]),
@@ -201,11 +219,44 @@ async function installAndImportPackages(packages: PackedPackage[], consumerDirec
 
   await runCommand(globalThis.process.execPath, ['install', '--ignore-scripts'], consumerDirectory);
 
-  const specifiers = packages.flatMap(({ manifest }) => runtimeSpecifiers(manifest));
-  const esmCheck = `for (const specifier of ${JSON.stringify(specifiers)}) await import(specifier);`;
-  const commonJsCheck = `for (const specifier of ${JSON.stringify(specifiers)}) require(specifier);`;
-  await runCommand('node', ['--input-type=module', '--eval', esmCheck], consumerDirectory);
-  await runCommand('node', ['--input-type=commonjs', '--eval', commonJsCheck], consumerDirectory);
+  const contracts = packages.flatMap(({ manifest }) =>
+    runtimeSpecifiers(manifest).map((specifier) => ({
+      manifest: { name: manifest.name, version: manifest.version },
+      specifier,
+    })),
+  );
+  const resultCollector =
+    "const results = []; for (const contract of contracts) { const loaded = LOAD(contract.specifier); results.push({ ...contract, exports: Object.fromEntries(Object.entries(AWAIT loaded).filter(([name, value]) => /version$/i.test(name) && typeof value === 'string')) }); } console.log(JSON.stringify(results));";
+  const esmCheck = `const contracts = ${JSON.stringify(contracts)}; ${resultCollector
+    .replace('LOAD', 'import')
+    .replace('AWAIT', 'await')}`;
+  const commonJsCheck = `const contracts = ${JSON.stringify(contracts)}; ${resultCollector
+    .replace('LOAD', 'require')
+    .replace('AWAIT', '')}`;
+
+  for (const [moduleMode, output] of [
+    [
+      'ESM',
+      await runCommand('node', ['--input-type=module', '--eval', esmCheck], consumerDirectory),
+    ],
+    [
+      'CommonJS',
+      await runCommand('node', ['--input-type=commonjs', '--eval', commonJsCheck], consumerDirectory),
+    ],
+  ] as const) {
+    const results = JSON.parse(output) as Array<{
+      manifest: Pick<PackageManifest, 'name' | 'version'>;
+      specifier: string;
+      exports: Record<string, unknown>;
+    }>;
+    for (const result of results) {
+      try {
+        assertPublicVersionExports(result.manifest, result.specifier, result.exports);
+      } catch (error) {
+        throw new Error(`${moduleMode} version contract failed`, { cause: error });
+      }
+    }
+  }
 }
 
 export async function runPackCheck(repositoryRoot: string): Promise<void> {

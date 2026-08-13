@@ -189,6 +189,6 @@ declare function getDeclaredActions(definition: FlowDefinition, stage: string): 
 declare function getActionSourceStages(definition: FlowDefinition, action: string): string[];
 declare function transition(definition: FlowDefinition, state: FlowState, command: FlowCommand, context?: EvaluationContext): TransitionOutcome;
 
-declare const FLOWKIT_CORE_VERSION = "0.1.0";
+declare const FLOWKIT_CORE_VERSION = "0.2.0";
 
 export { type ActionDef, type ActionName, type AuthorizationPolicy, type AuthorizationPolicyRegistry, AuthorizationRejectionError, type EvaluationContext, FLOWKIT_CORE_VERSION, type FlowCommand, type FlowDefinition, FlowDefinitionError, type FlowState, type FlowStateOverrides, type Guard, type GuardRegistry, GuardRejectionError, InvalidTrackValueError, InvalidTransitionError, type LintIssue, type LintIssueCode, MissingGuardError, MissingPolicyError, type PredicateContext, type StageDef, type StageName, type StepDef, type TrackDef, type TransitionOutcome, type TransitionRecord, UnknownStageError, UnknownTrackError, buildInitialState, defineFlow, flowSchema, formatIssues, getActionSourceStages, getDeclaredActions, lintFlow, lintInterpreterFlow, transition, validateRegistryRefs };

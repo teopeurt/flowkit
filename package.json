@@ -7,6 +7,6 @@
     "test": "bun test scripts && bun run --filter './packages/*' test",
     "build": "bun run --filter './packages/*' build",
     "pack:check": "bun run scripts/pack-check.ts",
-    "version:check": "bun run scripts/check-lockstep-versions.ts"
+    "version:check": "bun run scripts/check-lockstep-versions.ts && bun test scripts/check-lockstep-versions.test.ts"
   }
 }

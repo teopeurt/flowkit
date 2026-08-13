@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   assertDeclaredExportFilesPresent,
+  assertPublicVersionExports,
   assertSafeTarballEntries,
   createConsumerManifest,
   runtimeSpecifiers,
@@ -92,5 +93,23 @@ describe('packed artifact boundaries', () => {
         '@naakwu/flowkit-tasks': 'file:/tmp/tarballs/tasks.tgz',
       },
     });
+  });
+
+  test('rejects public version exports that differ from the packed manifest', () => {
+    expect(() =>
+      assertPublicVersionExports(
+        { name: '@naakwu/flowkit-core', version: '0.2.0' },
+        '@naakwu/flowkit-core',
+        { FLOWKIT_CORE_VERSION: '0.1.0' },
+      ),
+    ).toThrow(/FLOWKIT_CORE_VERSION.*0\.1\.0.*0\.2\.0/);
+
+    expect(() =>
+      assertPublicVersionExports(
+        { name: '@naakwu/flowkit-auth', version: '0.2.0' },
+        '@naakwu/flowkit-auth/testing',
+        { testingContractVersion: '0.2.0' },
+      ),
+    ).not.toThrow();
   });
 });

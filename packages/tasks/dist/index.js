@@ -4716,7 +4716,7 @@ function leaveTransitionPlan(input) {
 }
 
 // src/index.ts
-var FLOWKIT_TASKS_VERSION = "0.1.0";
+var FLOWKIT_TASKS_VERSION = "0.2.0";
 export {
   FLOWKIT_TASKS_VERSION,
   FlowkitTaskError,
