@@ -24,10 +24,10 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "zod": "^3.25.42"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "tsup": "^8.5.0",
-    "typescript": "^5"
+    "typescript": "^7"
   }
 }
