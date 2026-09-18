@@ -1,17 +1,13 @@
-var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-
 // src/errors.ts
 var AuthError = class extends Error {
-  static {
-    __name(this, "AuthError");
+  constructor(code, message, details) {
+    super(message);
+    this.code = code;
+    this.details = details;
   }
   code;
   details;
-  name;
-  constructor(code, message, details) {
-    super(message), this.code = code, this.details = details, this.name = "AuthError";
-  }
+  name = "AuthError";
 };
 
 // src/roles/registry.ts
@@ -26,55 +22,39 @@ function defineRoleRegistry(catalog) {
       aliases.set(alias, key);
     }
   }
-  const resolve = /* @__PURE__ */ __name((role) => Object.prototype.hasOwnProperty.call(catalog, role) ? role : aliases.get(role), "resolve");
+  const resolve = (role) => Object.prototype.hasOwnProperty.call(catalog, role) ? role : aliases.get(role);
   return Object.freeze({
     definitions: Object.freeze(catalog),
     normalizeRole: resolve,
-    getRole: /* @__PURE__ */ __name((role) => {
+    getRole: (role) => {
       const key = resolve(role);
       return key ? catalog[key] : void 0;
-    }, "getRole"),
-    listRoles: /* @__PURE__ */ __name(() => Object.freeze(Object.keys(catalog)), "listRoles"),
-    hasPermission: /* @__PURE__ */ __name((role, permission) => {
+    },
+    listRoles: () => Object.freeze(Object.keys(catalog)),
+    hasPermission: (role, permission) => {
       const definition = catalog[resolve(role) ?? ""];
       return definition?.permissions.includes(permission) ?? false;
-    }, "hasPermission"),
-    supportsScope: /* @__PURE__ */ __name((role, scope) => {
+    },
+    supportsScope: (role, scope) => {
       const definition = catalog[resolve(role) ?? ""];
       return definition?.scopes.includes(scope) ?? false;
-    }, "supportsScope"),
-    isReadOnly: /* @__PURE__ */ __name((role) => catalog[resolve(role) ?? ""]?.readOnly === true, "isReadOnly"),
-    canSelfProvision: /* @__PURE__ */ __name((role) => catalog[resolve(role) ?? ""]?.provisioning === "self_service", "canSelfProvision"),
-    getSessionPolicy: /* @__PURE__ */ __name((role) => {
+    },
+    isReadOnly: (role) => catalog[resolve(role) ?? ""]?.readOnly === true,
+    canSelfProvision: (role) => catalog[resolve(role) ?? ""]?.provisioning === "self_service",
+    getSessionPolicy: (role) => {
       const definition = catalog[resolve(role) ?? ""];
-      return definition && Object.freeze({
-        ttlSeconds: definition.sessionTtlSeconds
-      });
-    }, "getSessionPolicy")
+      return definition && Object.freeze({ ttlSeconds: definition.sessionTtlSeconds });
+    }
   });
 }
-__name(defineRoleRegistry, "defineRoleRegistry");
 
 // src/roles/synchronization.ts
 async function synchronizeRoles(registry, store, mode = "reconcile_metadata") {
   const inserted = [], unchanged = [], metadataUpdated = [], conflicts = [];
   for (const key of registry.listRoles()) {
     const role = registry.getRole(key);
-    const desired = {
-      key,
-      label: role.label,
-      description: role.description,
-      permissions: [
-        ...role.permissions
-      ],
-      scopes: [
-        ...role.scopes
-      ],
-      readOnly: role.readOnly === true
-    };
-    const existing = await store.findByKey({
-      key
-    });
+    const desired = { key, label: role.label, description: role.description, permissions: [...role.permissions], scopes: [...role.scopes], readOnly: role.readOnly === true };
+    const existing = await store.findByKey({ key });
     if (!existing) {
       if (mode !== "dry_run" && mode === "insert_missing") {
         await store.upsert(desired);
@@ -82,10 +62,7 @@ async function synchronizeRoles(registry, store, mode = "reconcile_metadata") {
       inserted.push(key);
       continue;
     }
-    const changed = JSON.stringify({
-      ...existing,
-      id: void 0
-    }) !== JSON.stringify(desired);
+    const changed = JSON.stringify({ ...existing, id: void 0 }) !== JSON.stringify(desired);
     if (!changed) unchanged.push(key);
     else if (mode === "reconcile_metadata") {
       await store.upsert(desired);
@@ -95,15 +72,8 @@ async function synchronizeRoles(registry, store, mode = "reconcile_metadata") {
   }
   const known = new Set(registry.listRoles());
   const unknownDatabase = (await store.list()).filter((role) => !known.has(role.key)).map((role) => role.key);
-  return {
-    inserted,
-    unchanged,
-    metadataUpdated,
-    unknownDatabase,
-    conflicts
-  };
+  return { inserted, unchanged, metadataUpdated, unknownDatabase, conflicts };
 }
-__name(synchronizeRoles, "synchronizeRoles");
 export {
   defineRoleRegistry,
   synchronizeRoles

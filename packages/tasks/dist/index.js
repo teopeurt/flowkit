@@ -4148,12 +4148,34 @@ async function queryTaskInbox(input) {
 }
 
 // src/maker-checker.ts
+function evaluateSeparationOfDuties(input) {
+  if (input.priorCompletions.length === 0 || input.priorCompletions.some((event) => event === null)) {
+    return { allowed: false, reason: "missing_history", conflictingActorIds: [], priorActorIds: [], factKey: input.factKey };
+  }
+  const completions = input.priorCompletions;
+  if (completions.some((event) => event.actorId === null)) {
+    return { allowed: false, reason: "missing_history", conflictingActorIds: [], priorActorIds: [], factKey: input.factKey };
+  }
+  const priorActorIds = [...new Set(completions.flatMap((event) => event.actorId ? [event.actorId] : []))];
+  if (completions.some((event) => event.eventType !== "completed" || event.nextStatus !== "completed" || event.action === null)) {
+    return { allowed: false, reason: "wrong_stage", conflictingActorIds: [], priorActorIds, factKey: input.factKey };
+  }
+  const conflictingActorIds = priorActorIds.filter((actorId) => actorId === input.actorId);
+  return {
+    allowed: conflictingActorIds.length === 0,
+    reason: conflictingActorIds.length === 0 ? "allowed" : "same_actor",
+    conflictingActorIds,
+    priorActorIds,
+    factKey: input.factKey
+  };
+}
 function evaluateMakerChecker(input) {
   const event = input.latestMakerCompletion;
-  if (!event || event.eventType !== "completed" || event.nextStatus !== "completed") return { allowed: false, reason: "missing_history", makerId: null, factKey: input.rule.factKey };
-  if (event.action === null) return { allowed: false, reason: "wrong_stage", makerId: event.actorId, factKey: input.rule.factKey };
-  if (event.actorId === input.actorId) return { allowed: false, reason: "same_actor", makerId: event.actorId, factKey: input.rule.factKey };
-  return { allowed: true, reason: "allowed", makerId: event.actorId, factKey: input.rule.factKey };
+  if (!event || event.eventType !== "completed" || event.nextStatus !== "completed" || event.actorId === null) {
+    return { allowed: false, reason: "missing_history", makerId: null, factKey: input.rule.factKey };
+  }
+  const decision = evaluateSeparationOfDuties({ actorId: input.actorId, priorCompletions: [input.latestMakerCompletion], factKey: input.rule.factKey });
+  return { allowed: decision.allowed, reason: decision.reason, makerId: decision.priorActorIds[0] ?? null, factKey: decision.factKey };
 }
 
 // ../../node_modules/.bun/@noble+hashes@2.3.0/node_modules/@noble/hashes/_u64.js
@@ -4725,6 +4747,7 @@ export {
   createLeaveApprovalFixture,
   createTaskInvitation,
   evaluateMakerChecker,
+  evaluateSeparationOfDuties,
   flowTaskSchema,
   hashContact,
   hashInvitationToken,

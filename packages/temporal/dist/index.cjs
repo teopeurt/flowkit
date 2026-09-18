@@ -49,6 +49,10 @@ function createFlowkitTemporalRuntime(options) {
       updateId: input.operationId,
       args: [{ action: input.action, actorId: input.actorId, comment: input.comment }]
     }),
+    signal: (input) => options.client.workflow.getHandle(input.flowId).executeUpdate("applySignal", {
+      updateId: input.operationId,
+      args: [{ action: input.action, comment: input.comment }]
+    }),
     get: ({ flowId }) => options.client.workflow.getHandle(flowId).query("getState"),
     health: () => options.healthProbe()
   };
@@ -234,7 +238,7 @@ var validateEntryRefs = (definition, registries, issues) => {
         continue;
       }
       for (const actionName of rule.actions) {
-        const action = stage.actions?.[actionName];
+        const action = (0, import_flowkit_core2.getActionDefinition)(definition, stageName, actionName);
         const actionPath = pathFor("stages", stageName, "actions", actionName);
         if (!action) {
           pushIssue(
@@ -258,44 +262,56 @@ var validateEntryRefs = (definition, registries, issues) => {
   }
 };
 var validateActionRefs = (definition, registries, issues) => {
+  const validateAction = (action, actionPath) => {
+    if (action.policy && !registries.policies?.[action.policy]) {
+      pushIssue(
+        issues,
+        "missing-policy-ref",
+        `${actionPath}.policy`,
+        `Missing policy ref "${action.policy}".`
+      );
+    }
+    for (const guard of action.guards ?? []) {
+      if (!registries.guards?.[guard]) {
+        pushIssue(
+          issues,
+          "missing-guard-ref",
+          `${actionPath}.guards`,
+          `Missing guard ref "${guard}".`
+        );
+      }
+    }
+    validateNotificationRefs(action.notify, actionPath, registries, issues);
+  };
+  for (const [actionName, action] of Object.entries(definition.actions ?? {})) {
+    validateAction(action, pathFor("actions", actionName));
+  }
   for (const [stageName, stage] of Object.entries(definition.stages)) {
     for (const [actionName, action] of Object.entries(stage.actions ?? {})) {
-      const actionPath = pathFor("stages", stageName, "actions", actionName);
-      if (action.policy && !registries.policies?.[action.policy]) {
+      validateAction(action, pathFor("stages", stageName, "actions", actionName));
+    }
+    validateNotificationRefs(stage.entryNotify, pathFor("stages", stageName, "entryNotify"), registries, issues);
+  }
+};
+var notificationBindings = (binding) => binding === void 0 ? [] : Array.isArray(binding) ? binding : [binding];
+var validateNotificationRefs = (binding, path, registries, issues) => {
+  for (const notification of notificationBindings(binding)) {
+    if (!registries.templates?.[notification.template]) {
+      pushIssue(
+        issues,
+        "missing-template-ref",
+        `${path}.template`,
+        `Missing template ref "${notification.template}".`
+      );
+    }
+    for (const channel of notification.channels) {
+      if (!registries.channels?.[channel]) {
         pushIssue(
           issues,
-          "missing-policy-ref",
-          `${actionPath}.policy`,
-          `Missing policy ref "${action.policy}".`
+          "missing-channel-ref",
+          `${path}.channels`,
+          `Missing channel ref "${channel}".`
         );
-      }
-      for (const guard of action.guards ?? []) {
-        if (!registries.guards?.[guard]) {
-          pushIssue(
-            issues,
-            "missing-guard-ref",
-            `${actionPath}.guards`,
-            `Missing guard ref "${guard}".`
-          );
-        }
-      }
-      if (action.notify?.template && !registries.templates?.[action.notify.template]) {
-        pushIssue(
-          issues,
-          "missing-template-ref",
-          `${actionPath}.notify.template`,
-          `Missing template ref "${action.notify.template}".`
-        );
-      }
-      for (const channel of action.notify?.channels ?? []) {
-        if (!registries.channels?.[channel]) {
-          pushIssue(
-            issues,
-            "missing-channel-ref",
-            `${actionPath}.notify.channels`,
-            `Missing channel ref "${channel}".`
-          );
-        }
       }
     }
   }

@@ -8,7 +8,7 @@ import {
   publishDefinition,
   validateFlowkit,
   verifyPublishedDefinition
-} from "./chunk-PDJX3YVH.js";
+} from "./chunk-UZ2XYLND.js";
 
 // src/consumer-runtime.ts
 function createFlowkitTemporalRuntime(options) {
@@ -24,6 +24,10 @@ function createFlowkitTemporalRuntime(options) {
     act: (input) => options.client.workflow.getHandle(input.flowId).executeUpdate("applyAction", {
       updateId: input.operationId,
       args: [{ action: input.action, actorId: input.actorId, comment: input.comment }]
+    }),
+    signal: (input) => options.client.workflow.getHandle(input.flowId).executeUpdate("applySignal", {
+      updateId: input.operationId,
+      args: [{ action: input.action, comment: input.comment }]
     }),
     get: ({ flowId }) => options.client.workflow.getHandle(flowId).query("getState"),
     health: () => options.healthProbe()

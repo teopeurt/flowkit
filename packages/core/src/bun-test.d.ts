@@ -3,6 +3,7 @@ declare module 'bun:test' {
     toBe(expected: unknown): void;
     toEqual(expected: unknown): void;
     toContainEqual(expected: unknown): void;
+    toThrow(expected?: unknown): void;
   }
 
   interface Expect {

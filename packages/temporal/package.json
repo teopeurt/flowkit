@@ -35,6 +35,8 @@
     "@temporalio/workflow": "1.16.2"
   },
   "devDependencies": {
+    "@temporalio/client": "1.16.2",
+    "@temporalio/common": "1.16.2",
     "@temporalio/testing": "1.16.2",
     "@temporalio/worker": "1.16.2",
     "tsup": "^8.5.0",

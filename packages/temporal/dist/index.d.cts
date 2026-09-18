@@ -1,7 +1,6 @@
-import { FlowRuntime } from '@naakwu/flowkit-consumer';
 import { FlowCommand, FlowDefinition } from '@naakwu/flowkit-core';
-import { F as FlowkitWorkflow, a as FlowkitWorkflowInput, b as FlowkitStateView, D as DefinitionHash, P as PublishedFlowDefinition, c as FlowkitPureRegistries, d as FlowkitDeclaredRefs } from './workflow-48LmBhbc.cjs';
-export { C as CommandEnvelope, e as CommandOrigin, f as DefinitionIdentity, g as DispatchNotificationInput, E as EntryReason, h as ExecuteAiStepInput, i as ExecuteAiStepOutput, j as ExecuteSystemStepInput, k as ExecuteSystemStepOutput, l as FlowkitActivityRegistry, m as FlowkitActorRef, n as FlowkitExecutionState, o as FlowkitNotificationBinding, p as FlowkitRule, q as FlowkitRuleRegistration, r as FlowkitStepResult, s as FlowkitSubject, R as RecordStageReadyInput, t as RecordTransitionInput, u as RecordTransitionOutput, v as ResolveActionContextInput, w as ResolvedActionContext, x as RuleContext } from './workflow-48LmBhbc.cjs';
+import { F as FlowkitWorkflow, a as FlowkitWorkflowInput, b as FlowkitStateView, c as FlowkitSignalCommand, P as PublishedFlowDefinition, d as FlowkitSubject, D as DefinitionHash, e as FlowkitPureRegistries, f as FlowkitDeclaredRefs } from './workflow-C-CVYkvw.cjs';
+export { C as CommandEnvelope, g as CommandOrigin, h as DefinitionIdentity, i as DispatchNotificationInput, E as EntryReason, j as ExecuteAiStepInput, k as ExecuteAiStepOutput, l as ExecuteSystemStepInput, m as ExecuteSystemStepOutput, n as FlowkitActivityRegistry, o as FlowkitActorRef, p as FlowkitExecutionState, q as FlowkitNotificationBinding, r as FlowkitRule, s as FlowkitRuleRegistration, t as FlowkitStepResult, R as RecordStageReadyInput, u as RecordTransitionInput, v as RecordTransitionOutput, w as ResolveActionContextInput, x as ResolvedActionContext, y as RuleContext } from './workflow-C-CVYkvw.cjs';
 import '@temporalio/workflow';
 
 interface TemporalWorkflowHandle {
@@ -10,6 +9,38 @@ interface TemporalWorkflowHandle {
         updateId: string;
         args: [FlowCommand];
     }): Promise<FlowkitStateView>;
+    executeUpdate(name: 'applySignal', options: {
+        updateId: string;
+        args: [FlowkitSignalCommand];
+    }): Promise<FlowkitStateView>;
+}
+interface TemporalRuntime {
+    start(input: {
+        flowId: string;
+        published: PublishedFlowDefinition;
+        subject: FlowkitSubject;
+        operationId: string;
+    }): Promise<FlowkitStateView>;
+    act(input: {
+        flowId: string;
+        action: string;
+        actorId: string;
+        operationId: string;
+        comment?: string;
+    }): Promise<FlowkitStateView>;
+    signal(input: {
+        flowId: string;
+        action: string;
+        operationId: string;
+        comment?: string;
+    }): Promise<FlowkitStateView>;
+    get(input: {
+        flowId: string;
+    }): Promise<FlowkitStateView>;
+    health(): Promise<{
+        ready: boolean;
+        checkedAt: string;
+    }>;
 }
 /**
  * A runtime resolves a workflow by its registered type name. A workflow value produced by a
@@ -35,7 +66,7 @@ interface TemporalRuntimeOptions {
         checkedAt: string;
     }>;
 }
-declare function createFlowkitTemporalRuntime(options: TemporalRuntimeOptions): FlowRuntime;
+declare function createFlowkitTemporalRuntime(options: TemporalRuntimeOptions): TemporalRuntime;
 
 declare class SnapshotError extends Error {
     constructor(message: string);
@@ -90,4 +121,4 @@ declare function assertValidFlowkit(args: {
 
 declare const FLOWKIT_TEMPORAL_VERSION = "0.2.0";
 
-export { DefinitionHash, FLOWKIT_TEMPORAL_VERSION, FlowkitDeclaredRefs, FlowkitPureRegistries, FlowkitStateView, FlowkitValidationError, type FlowkitValidationIssue, type FlowkitValidationRegistries, FlowkitWorkflowInput, PublishedFlowDefinition, SnapshotError, assertValidFlowkit, canonicalizeJson, createFlowkitTemporalRuntime, hashCanonicalJson, parseSlaDuration, publishDefinition, validateFlowkit, verifyPublishedDefinition };
+export { DefinitionHash, FLOWKIT_TEMPORAL_VERSION, FlowkitDeclaredRefs, FlowkitPureRegistries, FlowkitSignalCommand, FlowkitStateView, FlowkitSubject, FlowkitValidationError, type FlowkitValidationIssue, type FlowkitValidationRegistries, FlowkitWorkflowInput, PublishedFlowDefinition, SnapshotError, assertValidFlowkit, canonicalizeJson, createFlowkitTemporalRuntime, hashCanonicalJson, parseSlaDuration, publishDefinition, validateFlowkit, verifyPublishedDefinition };

@@ -3,7 +3,6 @@ var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -31,9 +30,6 @@ module.exports = __toCommonJS(testing_exports);
 
 // src/testing/in-memory-role.store.ts
 var InMemoryRoleStore = class {
-  static {
-    __name(this, "InMemoryRoleStore");
-  }
   roles = /* @__PURE__ */ new Map();
   nextId = 1;
   async findByKey({ key }) {
@@ -41,45 +37,29 @@ var InMemoryRoleStore = class {
   }
   async upsert(input) {
     const current = this.roles.get(input.key);
-    const record = {
-      ...input,
-      id: current?.id ?? `role-${this.nextId++}`
-    };
+    const record = { ...input, id: current?.id ?? `role-${this.nextId++}` };
     this.roles.set(input.key, record);
     return record;
   }
   async list() {
-    return [
-      ...this.roles.values()
-    ];
+    return [...this.roles.values()];
   }
 };
 
 // src/testing/in-memory-identity-link.store.ts
 var InMemoryIdentityLinkStore = class {
-  static {
-    __name(this, "InMemoryIdentityLinkStore");
-  }
   links = /* @__PURE__ */ new Map();
   byProof = /* @__PURE__ */ new Map();
   nextId = 1;
   async findByAuthUser({ authUserId }) {
-    return [
-      ...this.links.values()
-    ].find((link) => link.authUserId === authUserId);
+    return [...this.links.values()].find((link) => link.authUserId === authUserId);
   }
   async findByProof({ proof }) {
     const id = this.byProof.get(`${proof.kind}:${proof.normalizedValue}`);
     return id ? this.links.get(id) : void 0;
   }
   async createSubject(input) {
-    const link = {
-      subjectId: `subject-${this.nextId++}`,
-      authUserId: input.authUserId,
-      proofs: Object.freeze([
-        ...input.proofs
-      ])
-    };
+    const link = { subjectId: `subject-${this.nextId++}`, authUserId: input.authUserId, proofs: Object.freeze([...input.proofs]) };
     this.links.set(link.subjectId, link);
     for (const proof of input.proofs) this.byProof.set(`${proof.kind}:${proof.normalizedValue}`, link.subjectId);
     return link;
@@ -87,25 +67,21 @@ var InMemoryIdentityLinkStore = class {
   async claimSubject(input) {
     const link = this.links.get(input.subjectId);
     if (!link || link.authUserId) return false;
-    this.links.set(input.subjectId, {
-      ...link,
-      authUserId: input.authUserId
-    });
+    this.links.set(input.subjectId, { ...link, authUserId: input.authUserId });
     return true;
   }
 };
 
 // src/errors.ts
 var AuthError = class extends Error {
-  static {
-    __name(this, "AuthError");
+  constructor(code, message, details) {
+    super(message);
+    this.code = code;
+    this.details = details;
   }
   code;
   details;
-  name;
-  constructor(code, message, details) {
-    super(message), this.code = code, this.details = details, this.name = "AuthError";
-  }
+  name = "AuthError";
 };
 
 // src/roles/registry.ts
@@ -120,74 +96,43 @@ function defineRoleRegistry(catalog) {
       aliases.set(alias, key);
     }
   }
-  const resolve = /* @__PURE__ */ __name((role) => Object.prototype.hasOwnProperty.call(catalog, role) ? role : aliases.get(role), "resolve");
+  const resolve = (role) => Object.prototype.hasOwnProperty.call(catalog, role) ? role : aliases.get(role);
   return Object.freeze({
     definitions: Object.freeze(catalog),
     normalizeRole: resolve,
-    getRole: /* @__PURE__ */ __name((role) => {
+    getRole: (role) => {
       const key = resolve(role);
       return key ? catalog[key] : void 0;
-    }, "getRole"),
-    listRoles: /* @__PURE__ */ __name(() => Object.freeze(Object.keys(catalog)), "listRoles"),
-    hasPermission: /* @__PURE__ */ __name((role, permission) => {
+    },
+    listRoles: () => Object.freeze(Object.keys(catalog)),
+    hasPermission: (role, permission) => {
       const definition = catalog[resolve(role) ?? ""];
       return definition?.permissions.includes(permission) ?? false;
-    }, "hasPermission"),
-    supportsScope: /* @__PURE__ */ __name((role, scope) => {
+    },
+    supportsScope: (role, scope) => {
       const definition = catalog[resolve(role) ?? ""];
       return definition?.scopes.includes(scope) ?? false;
-    }, "supportsScope"),
-    isReadOnly: /* @__PURE__ */ __name((role) => catalog[resolve(role) ?? ""]?.readOnly === true, "isReadOnly"),
-    canSelfProvision: /* @__PURE__ */ __name((role) => catalog[resolve(role) ?? ""]?.provisioning === "self_service", "canSelfProvision"),
-    getSessionPolicy: /* @__PURE__ */ __name((role) => {
+    },
+    isReadOnly: (role) => catalog[resolve(role) ?? ""]?.readOnly === true,
+    canSelfProvision: (role) => catalog[resolve(role) ?? ""]?.provisioning === "self_service",
+    getSessionPolicy: (role) => {
       const definition = catalog[resolve(role) ?? ""];
-      return definition && Object.freeze({
-        ttlSeconds: definition.sessionTtlSeconds
-      });
-    }, "getSessionPolicy")
+      return definition && Object.freeze({ ttlSeconds: definition.sessionTtlSeconds });
+    }
   });
 }
-__name(defineRoleRegistry, "defineRoleRegistry");
 
 // src/testing/leave-approval.fixture.ts
-var leaveApprovalFixture = defineRoleRegistry({
-  employee: {
-    label: "Employee",
-    permissions: [
-      "leave:read"
-    ],
-    scopes: [
-      "company"
-    ],
-    kind: "external",
-    provisioning: "self_service"
-  },
-  approver: {
-    label: "Approver",
-    permissions: [
-      "leave:read",
-      "leave:approve"
-    ],
-    scopes: [
-      "company"
-    ],
-    kind: "internal",
-    provisioning: "invite_only"
-  }
-});
+var leaveApprovalFixture = defineRoleRegistry({ employee: { label: "Employee", permissions: ["leave:read"], scopes: ["company"], kind: "external", provisioning: "self_service" }, approver: { label: "Approver", permissions: ["leave:read", "leave:approve"], scopes: ["company"], kind: "internal", provisioning: "invite_only" } });
 
 // src/testing/contract-suites.ts
 var testingContractVersion = "0.2.0";
 function createTestClock(initial = /* @__PURE__ */ new Date("2026-01-01T00:00:00.000Z")) {
   let current = new Date(initial);
-  return {
-    now: /* @__PURE__ */ __name(() => new Date(current), "now"),
-    advance: /* @__PURE__ */ __name((milliseconds) => {
-      current = new Date(current.getTime() + milliseconds);
-    }, "advance")
-  };
+  return { now: () => new Date(current), advance: (milliseconds) => {
+    current = new Date(current.getTime() + milliseconds);
+  } };
 }
-__name(createTestClock, "createTestClock");
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   InMemoryIdentityLinkStore,

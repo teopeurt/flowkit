@@ -23,17 +23,21 @@ export interface PublishedFlowDefinition {
 /** Subject (application/case) the workflow instance governs. */
 export interface FlowkitSubject {
   id: string;
+  organizationId: string;
   metadata?: Record<string, unknown>;
 }
 
+/** Signal ingress deliberately has no caller-supplied actor identity. */
+export type FlowkitSignalCommand = Omit<FlowCommand, 'actorId'>;
+
 /** Who/what originated a command. Rules and SLAs may only target system actions. */
-export type CommandOrigin = 'human' | 'rule' | 'sla';
+export type CommandOrigin = 'human' | 'signal' | 'rule' | 'sla';
 
 /** Server-resolved authenticated actor. Never trusted from command payloads. */
 export interface FlowkitActorRef {
   id: string;
   roles: string[];
-  organizationId?: string;
+  organizationId: string;
 }
 
 export interface FlowkitNotificationBinding {
@@ -113,9 +117,19 @@ export interface ResolveActionContextInput {
   definition: DefinitionIdentity;
   subject: FlowkitSubject;
   state: FlowState;
+  /**
+   * For signal origins, actorId is deliberately omitted: caller-provided
+   * signal identity is untrusted and the activity must resolve the service
+   * principal from its own boundary.
+   */
   command: FlowCommand;
 }
 
+/**
+ * A resolved actor is authoritative for policy and organization scope. The
+ * `command.actorId` field is only an ingress hint for human commands and is
+ * never an authorization assertion.
+ */
 export interface ResolvedActionContext {
   actor?: FlowkitActorRef;
   facts: Record<string, unknown>;
@@ -141,6 +155,7 @@ export interface RecordTransitionInput {
   nextState: FlowState;
   transition: TransitionRecord;
   notify?: FlowkitNotificationBinding;
+  notifications?: FlowkitNotificationBinding[];
 }
 
 export interface RecordTransitionOutput {
@@ -160,11 +175,18 @@ export interface RecordStageReadyInput {
 }
 
 export interface ExecuteSystemStepInput {
+  workflowId: string;
   ref: string;
   definition: DefinitionIdentity;
   subject: FlowkitSubject;
   state: FlowState;
   entryEpoch: number;
+  stepIndex: number;
+  /**
+   * Serialized `(workflowId, entryEpoch, stepIndex)` identity. Activity
+   * persistence must enforce that tuple, or this complete key, for dedupe.
+   */
+  idempotencyKey: string;
   entryReason: EntryReason;
   priorTransition?: TransitionRecord;
 }
@@ -174,11 +196,15 @@ export interface ExecuteSystemStepOutput {
 }
 
 export interface ExecuteAiStepInput {
+  workflowId: string;
   ref: string;
   definition: DefinitionIdentity;
   subject: FlowkitSubject;
   state: FlowState;
   entryEpoch: number;
+  stepIndex: number;
+  /** Serialized `(workflowId, entryEpoch, stepIndex)` identity; see system steps. */
+  idempotencyKey: string;
   entryReason: EntryReason;
   priorTransition?: TransitionRecord;
 }

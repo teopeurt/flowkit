@@ -1,5 +1,5 @@
-import { flowSchema, lintInterpreterFlow } from '@naakwu/flowkit-core';
-import type { FlowDefinition } from '@naakwu/flowkit-core';
+import { flowSchema, getActionDefinition, lintInterpreterFlow } from '@naakwu/flowkit-core';
+import type { ActionDef, FlowDefinition, NotificationBinding } from '@naakwu/flowkit-core';
 
 import type {
   FlowkitDeclaredRefs,
@@ -94,7 +94,7 @@ const validateEntryRefs = (
       }
 
       for (const actionName of rule.actions) {
-        const action = stage.actions?.[actionName];
+        const action = getActionDefinition(definition, stageName, actionName);
         const actionPath = pathFor('stages', stageName, 'actions', actionName);
 
         if (!action) {
@@ -125,9 +125,7 @@ const validateActionRefs = (
   registries: FlowkitValidationRegistries,
   issues: FlowkitValidationIssue[],
 ) => {
-  for (const [stageName, stage] of Object.entries(definition.stages)) {
-    for (const [actionName, action] of Object.entries(stage.actions ?? {})) {
-      const actionPath = pathFor('stages', stageName, 'actions', actionName);
+  const validateAction = (action: ActionDef, actionPath: string) => {
 
       if (action.policy && !registries.policies?.[action.policy]) {
         pushIssue(
@@ -149,26 +147,50 @@ const validateActionRefs = (
         }
       }
 
-      if (action.notify?.template && !registries.templates?.[action.notify.template]) {
+      validateNotificationRefs(action.notify, actionPath, registries, issues);
+  };
+
+  for (const [actionName, action] of Object.entries(definition.actions ?? {})) {
+    validateAction(action, pathFor('actions', actionName));
+  }
+
+  for (const [stageName, stage] of Object.entries(definition.stages)) {
+    for (const [actionName, action] of Object.entries(stage.actions ?? {})) {
+      validateAction(action, pathFor('stages', stageName, 'actions', actionName));
+    }
+    validateNotificationRefs(stage.entryNotify, pathFor('stages', stageName, 'entryNotify'), registries, issues);
+  }
+};
+
+const notificationBindings = (binding: NotificationBinding | undefined) =>
+  binding === undefined ? [] : Array.isArray(binding) ? binding : [binding];
+
+const validateNotificationRefs = (
+  binding: NotificationBinding | undefined,
+  path: string,
+  registries: FlowkitValidationRegistries,
+  issues: FlowkitValidationIssue[],
+) => {
+  for (const notification of notificationBindings(binding)) {
+      if (!registries.templates?.[notification.template]) {
         pushIssue(
           issues,
           'missing-template-ref',
-          `${actionPath}.notify.template`,
-          `Missing template ref "${action.notify.template}".`,
+          `${path}.template`,
+          `Missing template ref "${notification.template}".`,
         );
       }
 
-      for (const channel of action.notify?.channels ?? []) {
+      for (const channel of notification.channels) {
         if (!registries.channels?.[channel]) {
           pushIssue(
             issues,
             'missing-channel-ref',
-            `${actionPath}.notify.channels`,
+            `${path}.channels`,
             `Missing channel ref "${channel}".`,
           );
         }
       }
-    }
   }
 };
 

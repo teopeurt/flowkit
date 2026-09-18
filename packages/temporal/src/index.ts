@@ -35,6 +35,7 @@ export type {
   FlowkitStepResult,
   FlowkitSubject,
   FlowkitPureRegistries,
+  FlowkitSignalCommand,
   FlowkitRule,
   FlowkitRuleRegistration,
   FlowkitWorkflowInput,

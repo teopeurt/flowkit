@@ -18,18 +18,21 @@ describe('lintFlow', () => {
       stages: {
         draft: {
           pendingRole: 'author',
+          steady: true,
           actions: {
             submit: { to: 'review', tracks: { visibility: 'public' } },
           },
         },
         review: {
           pendingRole: 'reviewer',
+          steady: true,
           actions: {
             submit: { to: 'published' },
           },
         },
         stalled: {
           pendingRole: 'reviewer',
+          steady: true,
         },
         published: {
           final: true,
@@ -140,6 +143,53 @@ describe('lintInterpreterFlow', () => {
     expect(
       lintFlow(interpreterDefinition()).filter((issue) => issue.code === 'missing-action-policy'),
     ).toEqual([]);
+  });
+
+  test('requires authorization policies on externally invokable signal actions', () => {
+    const input = interpreterInput();
+    const definition = defineFlow({
+      ...input,
+      stages: {
+        ...input.stages,
+        draft: {
+          ...input.stages.draft,
+          actions: {
+            ...input.stages.draft.actions,
+            refresh: { to: 'draft', kind: 'signal' as any },
+          },
+        },
+      },
+    } as any);
+
+    expect(lintInterpreterFlow(definition)).toContainEqual(
+      expect.objectContaining({
+        code: 'missing-action-policy',
+        severity: 'error',
+        path: 'stages.draft.actions.refresh.policy',
+      }),
+    );
+  });
+
+  test('warns on unbounded stages unless they are steady or automatically routed', () => {
+    const definition = defineFlow({
+      id: 'lifecycle-lint',
+      version: 1,
+      roles: [],
+      initialStage: 'waiting',
+      stages: {
+        waiting: { actions: { advance: { to: 'automatic', kind: 'system' } } },
+        automatic: {
+          entry: [{ kind: 'rule', ref: 'route' }],
+          actions: { finish: { to: 'done', kind: 'system' } },
+        },
+        resting: { steady: true, actions: { finish: { to: 'done', kind: 'system' } } },
+        done: { final: true },
+      },
+    } as any);
+
+    expect(lintFlow(definition).filter((issue) => issue.code === 'unbounded-stage')).toEqual([
+      expect.objectContaining({ path: 'stages.waiting', severity: 'warning' }),
+    ]);
   });
 });
 

@@ -21,7 +21,7 @@ const published = publishDefinition({
   },
 });
 
-const subject = { id: 'leave-request-1' };
+const subject = { id: 'leave-request-1', organizationId: 'org-1' };
 const state: FlowkitStateView = {
   state: { stage: 'draft', status: 'draft', pendingRole: 'employee', tracks: {} },
   sequence: 0,
@@ -70,8 +70,10 @@ describe('createFlowkitTemporalRuntime', () => {
 
     await runtime.start({ flowId: 'leave-1', published, subject, operationId: 'start-1' });
     await runtime.act({ flowId: 'leave-1', action: 'submit', actorId: 'employee-1', operationId: 'submit-1' });
+    await runtime.signal({ flowId: 'leave-1', action: 'refresh', operationId: 'refresh-1' });
 
     expect(client.started[0]).toMatchObject({ workflowId: 'leave-1', args: [{ published, subject }] });
     expect(client.updates[0]).toEqual({ name: 'applyAction', updateId: 'submit-1', args: [{ action: 'submit', actorId: 'employee-1' }] });
+    expect(client.updates[1]).toEqual({ name: 'applySignal', updateId: 'refresh-1', args: [{ action: 'refresh', comment: undefined }] });
   });
 });

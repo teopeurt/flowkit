@@ -579,6 +579,18 @@ declare function queryTaskInbox(input: {
     query: TaskInboxQuery;
 }): Promise<TaskInboxPage>;
 
+interface SeparationOfDutiesDecision {
+    allowed: boolean;
+    reason: 'allowed' | 'same_actor' | 'missing_history' | 'wrong_stage';
+    conflictingActorIds: string[];
+    priorActorIds: string[];
+    factKey: string;
+}
+declare function evaluateSeparationOfDuties(input: {
+    actorId: string;
+    priorCompletions: Array<TaskEvent | null>;
+    factKey: string;
+}): SeparationOfDutiesDecision;
 interface MakerCheckerRule {
     makerStage: string;
     checkerStage: string;
@@ -838,4 +850,4 @@ declare function leaveTransitionPlan(input: {
 
 declare const FLOWKIT_TASKS_VERSION = "0.2.0";
 
-export { FLOWKIT_TASKS_VERSION, type FlowTask, type FlowTaskStatus, FlowkitTaskError, type JsonPrimitive, type JsonValue, type MakerCheckerDecision, type MakerCheckerRule, MemoryTaskStore, type TaskClaimCommand, type TaskClock, type TaskEligibilityResolver, type TaskErrorCode, type TaskEvent, type TaskEventType, type TaskIdentityGateway, type TaskInboxPage, type TaskInboxQuery, type TaskInvitation, type TaskInvitationNotifier, type TaskLogger, type TaskMutation, type TaskProjectionInput, type TaskProjectionPlan, type TaskProjectionResult, type TaskReassignCommand, type TaskReference, type TaskReleaseCommand, type TaskSort, type TaskStore, claimTask, createLeaveApprovalFixture, createTaskInvitation, evaluateMakerChecker, flowTaskSchema, hashContact, hashInvitationToken, humanTaskForStage, jsonValueSchema, leaveApprovalDefinition, leaveTransitionPlan, planTaskProjection, queryTaskInbox, reassignTask, redeemTaskInvitation, releaseTask, requireTokenEntropy, stageReadyIntent, taskInboxQuerySchema, taskProjectionInputSchema, taskReferenceSchema };
+export { FLOWKIT_TASKS_VERSION, type FlowTask, type FlowTaskStatus, FlowkitTaskError, type JsonPrimitive, type JsonValue, type MakerCheckerDecision, type MakerCheckerRule, MemoryTaskStore, type SeparationOfDutiesDecision, type TaskClaimCommand, type TaskClock, type TaskEligibilityResolver, type TaskErrorCode, type TaskEvent, type TaskEventType, type TaskIdentityGateway, type TaskInboxPage, type TaskInboxQuery, type TaskInvitation, type TaskInvitationNotifier, type TaskLogger, type TaskMutation, type TaskProjectionInput, type TaskProjectionPlan, type TaskProjectionResult, type TaskReassignCommand, type TaskReference, type TaskReleaseCommand, type TaskSort, type TaskStore, claimTask, createLeaveApprovalFixture, createTaskInvitation, evaluateMakerChecker, evaluateSeparationOfDuties, flowTaskSchema, hashContact, hashInvitationToken, humanTaskForStage, jsonValueSchema, leaveApprovalDefinition, leaveTransitionPlan, planTaskProjection, queryTaskInbox, reassignTask, redeemTaskInvitation, releaseTask, requireTokenEntropy, stageReadyIntent, taskInboxQuerySchema, taskProjectionInputSchema, taskReferenceSchema };

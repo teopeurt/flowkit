@@ -14,15 +14,18 @@ interface PublishedFlowDefinition {
 /** Subject (application/case) the workflow instance governs. */
 interface FlowkitSubject {
     id: string;
+    organizationId: string;
     metadata?: Record<string, unknown>;
 }
+/** Signal ingress deliberately has no caller-supplied actor identity. */
+type FlowkitSignalCommand = Omit<FlowCommand, 'actorId'>;
 /** Who/what originated a command. Rules and SLAs may only target system actions. */
-type CommandOrigin = 'human' | 'rule' | 'sla';
+type CommandOrigin = 'human' | 'signal' | 'rule' | 'sla';
 /** Server-resolved authenticated actor. Never trusted from command payloads. */
 interface FlowkitActorRef {
     id: string;
     roles: string[];
-    organizationId?: string;
+    organizationId: string;
 }
 interface FlowkitNotificationBinding {
     template: string;
@@ -89,8 +92,18 @@ interface ResolveActionContextInput {
     definition: DefinitionIdentity;
     subject: FlowkitSubject;
     state: FlowState;
+    /**
+     * For signal origins, actorId is deliberately omitted: caller-provided
+     * signal identity is untrusted and the activity must resolve the service
+     * principal from its own boundary.
+     */
     command: FlowCommand;
 }
+/**
+ * A resolved actor is authoritative for policy and organization scope. The
+ * `command.actorId` field is only an ingress hint for human commands and is
+ * never an authorization assertion.
+ */
 interface ResolvedActionContext {
     actor?: FlowkitActorRef;
     facts: Record<string, unknown>;
@@ -115,6 +128,7 @@ interface RecordTransitionInput {
     nextState: FlowState;
     transition: TransitionRecord;
     notify?: FlowkitNotificationBinding;
+    notifications?: FlowkitNotificationBinding[];
 }
 interface RecordTransitionOutput {
     /** Projected state; an idempotent retry returns the stored state. */
@@ -131,11 +145,18 @@ interface RecordStageReadyInput {
     slaDeadline?: number;
 }
 interface ExecuteSystemStepInput {
+    workflowId: string;
     ref: string;
     definition: DefinitionIdentity;
     subject: FlowkitSubject;
     state: FlowState;
     entryEpoch: number;
+    stepIndex: number;
+    /**
+     * Serialized `(workflowId, entryEpoch, stepIndex)` identity. Activity
+     * persistence must enforce that tuple, or this complete key, for dedupe.
+     */
+    idempotencyKey: string;
     entryReason: EntryReason;
     priorTransition?: TransitionRecord;
 }
@@ -143,11 +164,15 @@ interface ExecuteSystemStepOutput {
     output?: unknown;
 }
 interface ExecuteAiStepInput {
+    workflowId: string;
     ref: string;
     definition: DefinitionIdentity;
     subject: FlowkitSubject;
     state: FlowState;
     entryEpoch: number;
+    stepIndex: number;
+    /** Serialized `(workflowId, entryEpoch, stepIndex)` identity; see system steps. */
+    idempotencyKey: string;
     entryReason: EntryReason;
     priorTransition?: TransitionRecord;
 }
@@ -234,4 +259,4 @@ type FlowkitWorkflow = (input: FlowkitWorkflowInput) => Promise<unknown>;
  */
 declare function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWorkflow;
 
-export { type CommandEnvelope as C, type DefinitionHash as D, type EntryReason as E, type FlowkitWorkflow as F, type PublishedFlowDefinition as P, type RecordStageReadyInput as R, type FlowkitWorkflowInput as a, type FlowkitStateView as b, type FlowkitPureRegistries as c, type FlowkitDeclaredRefs as d, type CommandOrigin as e, type DefinitionIdentity as f, type DispatchNotificationInput as g, type ExecuteAiStepInput as h, type ExecuteAiStepOutput as i, type ExecuteSystemStepInput as j, type ExecuteSystemStepOutput as k, type FlowkitActivityRegistry as l, type FlowkitActorRef as m, type FlowkitExecutionState as n, type FlowkitNotificationBinding as o, type FlowkitRule as p, type FlowkitRuleRegistration as q, type FlowkitStepResult as r, type FlowkitSubject as s, type RecordTransitionInput as t, type RecordTransitionOutput as u, type ResolveActionContextInput as v, type ResolvedActionContext as w, type RuleContext as x, type FlowkitWorkflowConfig as y, createFlowkitWorkflow as z };
+export { createFlowkitWorkflow as A, type CommandEnvelope as C, type DefinitionHash as D, type EntryReason as E, type FlowkitWorkflow as F, type PublishedFlowDefinition as P, type RecordStageReadyInput as R, type FlowkitWorkflowInput as a, type FlowkitStateView as b, type FlowkitSignalCommand as c, type FlowkitSubject as d, type FlowkitPureRegistries as e, type FlowkitDeclaredRefs as f, type CommandOrigin as g, type DefinitionIdentity as h, type DispatchNotificationInput as i, type ExecuteAiStepInput as j, type ExecuteAiStepOutput as k, type ExecuteSystemStepInput as l, type ExecuteSystemStepOutput as m, type FlowkitActivityRegistry as n, type FlowkitActorRef as o, type FlowkitExecutionState as p, type FlowkitNotificationBinding as q, type FlowkitRule as r, type FlowkitRuleRegistration as s, type FlowkitStepResult as t, type RecordTransitionInput as u, type RecordTransitionOutput as v, type ResolveActionContextInput as w, type ResolvedActionContext as x, type RuleContext as y, type FlowkitWorkflowConfig as z };

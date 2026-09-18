@@ -1,4 +1,5 @@
 import type {
+  ActionDef,
   EvaluationContext,
   FlowCommand,
   FlowDefinition,
@@ -177,16 +178,38 @@ export function getDeclaredActions(
   definition: FlowDefinition,
   stage: string,
 ): string[] {
-  return Object.keys(getStage(definition, stage).actions ?? {});
+  const stageDefinition = getStage(definition, stage);
+  if (stageDefinition.final) return [];
+  const disabled = new Set(stageDefinition.disabledGlobalActions ?? []);
+  const local = Object.keys(stageDefinition.actions ?? {});
+  return [
+    ...local,
+    ...Object.keys(definition.actions ?? {}).filter(
+      (action) => !disabled.has(action) && !local.includes(action),
+    ),
+  ];
+}
+
+export function getActionDefinition(
+  definition: FlowDefinition,
+  stage: string,
+  action: string,
+): ActionDef | undefined {
+  const stageDefinition = getStage(definition, stage);
+  if (stageDefinition.final) return undefined;
+  const local = stageDefinition.actions?.[action];
+  if (local) return local;
+  if (stageDefinition.disabledGlobalActions?.includes(action)) return undefined;
+  return definition.actions?.[action];
 }
 
 export function getActionSourceStages(
   definition: FlowDefinition,
   action: string,
 ): string[] {
-  return Object.entries(definition.stages)
-    .filter(([, stage]) => stage.actions?.[action])
-    .map(([stageName]) => stageName);
+  return Object.keys(definition.stages).filter(
+    (stageName) => getActionDefinition(definition, stageName, action) !== undefined,
+  );
 }
 
 export function transition(
@@ -197,8 +220,7 @@ export function transition(
 ): TransitionOutcome {
   validateState(definition, state);
 
-  const stageDefinition = getStage(definition, state.stage);
-  const actionDefinition = stageDefinition.actions?.[command.action];
+  const actionDefinition = getActionDefinition(definition, state.stage, command.action);
 
   if (!actionDefinition) {
     throw new InvalidTransitionError(

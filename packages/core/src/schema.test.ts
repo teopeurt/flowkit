@@ -162,6 +162,37 @@ describe('flowSchema', () => {
     expectInvalid({ ...d, stages: { ...d.stages, review: { ...d.stages.review, sla: { after: '72h', escalate: { action: 'submit' } } } } });
   });
 
+  test('accepts an SLA auto-action declared as an eligible top-level action', () => {
+    const d = validDefinition();
+    const definition = {
+      ...d,
+      actions: {
+        publish: { to: 'published', kind: 'system' as const },
+      },
+      stages: {
+        ...d.stages,
+        review: {
+          ...d.stages.review,
+          actions: undefined,
+          sla: { after: '72h', escalate: { action: 'publish' } },
+        },
+      },
+    };
+
+    expect(flowSchema.safeParse(definition).success).toBe(true);
+  });
+
+  test('uses actions as the public top-level action field', () => {
+    const d = validDefinition();
+    const parsed = flowSchema.parse({
+      ...d,
+      actions: { withdraw: { to: 'draft', kind: 'system' as const } },
+    });
+
+    expect(parsed.actions?.withdraw).toEqual({ to: 'draft', kind: 'system' });
+    expect(flowSchema.safeParse({ ...d, globalActions: {} }).success).toBe(false);
+  });
+
   test('rejects an SLA auto-action targeting a human action', () => {
     const d = validDefinition();
     expectInvalid({
@@ -239,5 +270,56 @@ describe('flowSchema', () => {
     };
 
     expect(flowSchema.safeParse(definition).success).toBe(true);
+  });
+
+  test('accepts governance lifecycle, signal, global action, and notification contracts', () => {
+    const d = validDefinition();
+    const definition = {
+      ...d,
+      actions: {
+        withdraw: {
+          to: 'published',
+          policy: 'authorOnly',
+          notify: [
+            { template: 'withdrawn', channels: ['email'], to: ['author'] },
+            { template: 'audit', channels: ['email'], to: ['supervisor'] },
+          ],
+        },
+      },
+      stages: {
+        ...d.stages,
+        draft: {
+          ...d.stages.draft,
+          steady: true,
+          entryNotify: [{ template: 'draftReady', channels: ['email'], to: ['author'] }],
+          disabledGlobalActions: ['withdraw'],
+          actions: {
+            ...d.stages.draft.actions,
+            refresh: { to: 'draft', kind: 'signal', policy: 'trustedScheduler' },
+          },
+        },
+      },
+    };
+
+    expect(flowSchema.parse(definition)).toEqual(definition);
+  });
+
+  test('rejects a stage that is both final and steady', () => {
+    const d = validDefinition();
+    expectInvalid({
+      ...d,
+      stages: { ...d.stages, published: { final: true, steady: true } },
+    });
+  });
+
+  test('rejects a disabled global action that is not declared', () => {
+    const d = validDefinition();
+    expectInvalid({
+      ...d,
+      stages: {
+        ...d.stages,
+        draft: { ...d.stages.draft, disabledGlobalActions: ['missing'] },
+      },
+    });
   });
 });

@@ -9,21 +9,32 @@ export interface StepDef {
   gate?: 'human';
 }
 
+export interface NotificationDef {
+  template: string;
+  channels: string[];
+  to?: string[];
+}
+
+export type NotificationBinding = NotificationDef | NotificationDef[];
+
 export interface ActionDef {
   to: string;
-  kind?: 'human' | 'system';
+  kind?: 'human' | 'system' | 'signal';
   status?: string;
   pendingRole?: string | null;
   tracks?: Record<string, string>;
   guards?: string[];
   policy?: string;
-  notify?: { template: string; channels: string[]; to?: string[] };
+  notify?: NotificationBinding;
 }
 
 export interface StageDef {
   pendingRole?: string | null;
   final?: boolean;
+  steady?: boolean;
   entry?: StepDef[];
+  entryNotify?: NotificationBinding;
+  disabledGlobalActions?: string[];
   sla?: {
     after: string;
     escalate: { notify?: string; action?: string };
@@ -38,16 +49,21 @@ export interface FlowDefinition {
   tracks?: Record<string, TrackDef>;
   initialStage: string;
   initialStatus?: string;
+  actions?: Record<string, ActionDef>;
   stages: Record<string, StageDef>;
 }
 
 export type StageName<D extends FlowDefinition> = keyof D['stages'] & string;
 
-export type ActionName<D extends FlowDefinition> = {
+export type StageActionName<D extends FlowDefinition> = {
   [S in keyof D['stages']]: D['stages'][S] extends { actions?: infer A }
     ? keyof NonNullable<A> & string
     : never;
 }[keyof D['stages']];
+
+export type ActionName<D extends FlowDefinition> =
+  | StageActionName<D>
+  | (D extends { actions?: infer A } ? keyof NonNullable<A> & string : never);
 
 export interface FlowCommand {
   action: string;
@@ -98,7 +114,8 @@ export type LintIssueCode =
   | 'missing-step-ref'
   | 'missing-template-ref'
   | 'missing-channel-ref'
-  | 'missing-action-policy';
+  | 'missing-action-policy'
+  | 'unbounded-stage';
 
 export interface LintIssue {
   code: LintIssueCode;

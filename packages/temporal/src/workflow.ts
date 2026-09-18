@@ -13,16 +13,19 @@ import {
 } from '@temporalio/workflow';
 import {
   buildInitialState,
+  getActionDefinition,
   getDeclaredActions,
   transition,
 } from '@naakwu/flowkit-core';
-import type { FlowCommand, FlowState } from '@naakwu/flowkit-core';
+import type { FlowCommand, FlowState, NotificationBinding } from '@naakwu/flowkit-core';
 
 import type {
   CommandEnvelope,
   FlowkitActivityRegistry,
   FlowkitExecutionState,
   FlowkitPureRegistries,
+  FlowkitNotificationBinding,
+  FlowkitSignalCommand,
   FlowkitStateView,
   FlowkitWorkflowInput,
   EntryReason,
@@ -30,6 +33,14 @@ import type {
 import type { TransitionRecord } from '@naakwu/flowkit-core';
 import { verifyPublishedDefinition } from './snapshot';
 import { parseSlaDuration } from './validation';
+
+const isFactsObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeNotifications = (
+  binding: NotificationBinding | undefined,
+): FlowkitNotificationBinding[] =>
+  binding === undefined ? [] : Array.isArray(binding) ? binding : [binding];
 
 export interface FlowkitWorkflowConfig {
   registries: FlowkitPureRegistries;
@@ -79,6 +90,7 @@ const commandFailure = (error: unknown): ApplicationFailure => ApplicationFailur
 export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWorkflow {
   const query = defineQuery<FlowkitStateView>(config.queryName ?? 'getState');
   const update = defineUpdate<FlowkitStateView, [FlowCommand]>(config.updateName ?? 'applyAction');
+  const signalUpdate = defineUpdate<FlowkitStateView, [FlowkitSignalCommand]>('applySignal');
   const activities = proxyActivities<FlowkitActivityRegistry>({
     taskQueue: config.activityTaskQueue,
     startToCloseTimeout: '1 minute',
@@ -110,7 +122,7 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
       (config.adaptState?.({ state: view(), input }) ?? view()) as FlowkitStateView;
 
     setHandler(query, adaptedView);
-    setHandler(update, async (command) => {
+    const enqueueUpdate = async (origin: 'human' | 'signal', command: FlowCommand) => {
       const updateId = currentUpdateInfo()?.id;
 
       if (!updateId) {
@@ -122,42 +134,67 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
       }
 
       const completion = new Trigger<FlowkitStateView>();
-      commands.push({ operationId: updateId, origin: 'human', command, completion });
+      commands.push({ operationId: updateId, origin, command, completion });
       return await completion;
-    });
+    };
+    setHandler(update, (command) => enqueueUpdate('human', command));
+    setHandler(signalUpdate, (command) => enqueueUpdate('signal', command));
 
-    const runEntry = async (reason: EntryReason, priorTransition?: TransitionRecord) => {
+    const runEntry = async (
+      reason: EntryReason,
+      priorTransition?: TransitionRecord,
+      completion?: Trigger<FlowkitStateView>,
+    ): Promise<boolean> => {
       if (definition.stages[execution.state.stage]?.final) {
         execution.completed = true;
-        return;
+        return false;
       }
 
+      const entryFacts: Record<string, unknown> = {};
+      const automaticCommands: Array<CommandEnvelope & { completion?: Trigger<FlowkitStateView> }> = [];
       for (const [index, step] of (definition.stages[execution.state.stage]?.entry ?? []).entries()) {
         const key = `${execution.entryEpoch}:${index}`;
+        const stepIdentity = {
+          workflowId: workflowInfo().workflowId,
+          stepIndex: index,
+          idempotencyKey: JSON.stringify([
+            workflowInfo().workflowId,
+            execution.entryEpoch,
+            index,
+          ]),
+        };
         if (step.kind === 'system') {
-          const result = await activities.executeSystemStep({ ref: step.ref, definition: definitionIdentity, subject: input.subject, state: execution.state, entryEpoch: execution.entryEpoch, entryReason: reason, priorTransition });
+          const result = await activities.executeSystemStep({ ...stepIdentity, ref: step.ref, definition: definitionIdentity, subject: input.subject, state: execution.state, entryEpoch: execution.entryEpoch, entryReason: reason, priorTransition });
           execution.stepResults[key] = { ref: step.ref, kind: 'system', status: 'completed', entryEpoch: execution.entryEpoch, output: result.output };
+          if (isFactsObject(result.output)) Object.assign(entryFacts, result.output);
           continue;
         }
         if (step.kind === 'ai') {
           try {
-            const result = await aiActivities.executeAiStep({ ref: step.ref, definition: definitionIdentity, subject: input.subject, state: execution.state, entryEpoch: execution.entryEpoch, entryReason: reason, priorTransition });
+            const result = await aiActivities.executeAiStep({ ...stepIdentity, ref: step.ref, definition: definitionIdentity, subject: input.subject, state: execution.state, entryEpoch: execution.entryEpoch, entryReason: reason, priorTransition });
             execution.stepResults[key] = { ref: step.ref, kind: 'ai', status: 'completed', entryEpoch: execution.entryEpoch, output: result.output };
+            if (isFactsObject(result.output)) Object.assign(entryFacts, result.output);
           } catch {
             execution.stepResults[key] = { ref: step.ref, kind: 'ai', status: 'degraded_to_human', entryEpoch: execution.entryEpoch };
           }
           continue;
         }
 
-        const action = config.registries.rules?.[step.ref]?.run({ definition, state: execution.state, subject: input.subject.metadata ?? {}, facts: {}, priorTransition });
+        const action = config.registries.rules?.[step.ref]?.run({ definition, state: execution.state, subject: input.subject.metadata ?? {}, facts: entryFacts, priorTransition });
         if (action) {
           if (automaticTransitions >= (config.maxAutomaticTransitionsPerTurn ?? 32)) {
             throw ApplicationFailure.nonRetryable('Automatic transition limit exceeded.', 'FLOWKIT_AUTOMATIC_LOOP');
           }
           automaticTransitions += 1;
-          commands.push({ operationId: `rule:${execution.entryEpoch}:${index}`, origin: 'rule', command: { action, actorId: 'system' } });
+          automaticCommands.push({ operationId: `rule:${execution.entryEpoch}:${index}`, origin: 'rule', command: { action, actorId: 'system' } });
         }
       }
+
+      if (completion && automaticCommands.length > 0) {
+        automaticCommands.at(-1)!.completion = completion;
+      }
+      commands.unshift(...automaticCommands);
+      return automaticCommands.length > 0;
     };
 
     const armSla = async () => {
@@ -207,14 +244,19 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
       }
 
       try {
-        const stage = definition.stages[execution.state.stage];
-        const action = stage?.actions?.[envelope.command.action];
+        const action = getActionDefinition(definition, execution.state.stage, envelope.command.action);
 
-        const expectedKind = envelope.origin === 'human' ? 'human' : 'system';
+        const expectedKind = envelope.origin === 'human' ? 'human' : envelope.origin === 'signal' ? 'signal' : 'system';
         if (!action || (action.kind ?? 'human') !== expectedKind) {
           throw new Error(`Action "${envelope.command.action}" is not a valid ${expectedKind} action from stage "${execution.state.stage}".`);
         }
 
+        const contextCommand = envelope.origin === 'signal'
+          ? (() => {
+            const { actorId: _callerActorId, ...commandWithoutCallerIdentity } = envelope.command;
+            return commandWithoutCallerIdentity;
+          })()
+          : envelope.command;
         const context = await activities.resolveActionContext({
           workflowId: workflowInfo().workflowId,
           runId: workflowInfo().runId,
@@ -223,7 +265,7 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           definition: definitionIdentity,
           subject: input.subject,
           state: execution.state,
-          command: envelope.command,
+          command: contextCommand,
         });
 
         if (context.priorResult) {
@@ -232,7 +274,14 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           continue;
         }
 
-        const command = envelope.origin === 'human' && context.actor
+        if (
+          (envelope.origin === 'human' || envelope.origin === 'signal') &&
+          (!context.actor || context.actor.organizationId !== input.subject.organizationId)
+        ) {
+          throw new Error('Actor organization does not match the workflow subject organization.');
+        }
+
+        const command = (envelope.origin === 'human' || envelope.origin === 'signal') && context.actor
           ? { ...envelope.command, actorId: context.actor.id }
           : envelope.command;
 
@@ -243,6 +292,10 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           policies: config.registries.policies,
           guards: config.registries.guards,
         });
+        const notifications = [
+          ...normalizeNotifications(action.notify),
+          ...normalizeNotifications(definition.stages[outcome.state.stage]?.entryNotify),
+        ];
         const projected = await activities.recordTransition({
           workflowId: workflowInfo().workflowId,
           runId: workflowInfo().runId,
@@ -255,7 +308,8 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           previousState: execution.state,
           nextState: outcome.state,
           transition: outcome.transition,
-          notify: action.notify,
+          notify: notifications[0],
+          notifications,
         });
 
         execution.state = projected.state;
@@ -263,10 +317,12 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
         execution.entryEpoch += 1;
         execution.completed = definition.stages[execution.state.stage]?.final === true;
         if (!execution.completed) {
-          await runEntry('transition', outcome.transition);
+          const completionTransferred = await runEntry('transition', outcome.transition, envelope.completion);
           await armSla();
+          if (!completionTransferred) envelope.completion?.resolve(adaptedView());
+        } else {
+          envelope.completion?.resolve(adaptedView());
         }
-        envelope.completion?.resolve(adaptedView());
         if (commands.length === 0) automaticTransitions = 0;
       } catch (error) {
         if (

@@ -23,6 +23,7 @@ cat > "$demo_checkout/package.json" <<'JSON'
   "scripts": {
     "typecheck": "node fake-demo-command.mjs typecheck",
     "test": "node fake-demo-command.mjs test",
+    "test:enrolment-conformance": "node fake-demo-command.mjs test:enrolment-conformance",
     "build": "node fake-demo-command.mjs build",
     "stack:ci": "node fake-demo-command.mjs stack:ci"
   },
@@ -38,6 +39,27 @@ cat > "$demo_checkout/package.json" <<'JSON'
 }
 JSON
 
+cat > "$demo_checkout/bun.lock" <<'JSON'
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "fake-flowkit-demo",
+      "dependencies": {
+        "@naakwu/flowkit-auth": "0.2.0",
+        "@naakwu/flowkit-consumer": "0.2.0",
+        "@naakwu/flowkit-core": "0.2.0",
+        "@naakwu/flowkit-notify": "0.2.0",
+        "@naakwu/flowkit-tasks": "0.2.0",
+        "@naakwu/flowkit-temporal": "0.2.0",
+        "zod": "3.25.76"
+      }
+    }
+  }
+}
+JSON
+
 cat > "$demo_checkout/fake-demo-command.mjs" <<'JS'
 import { appendFileSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
@@ -45,11 +67,13 @@ import { join } from "node:path";
 const captureDirectory = process.env.FLOWKIT_CANDIDATE_TEST_CAPTURE;
 if (!captureDirectory) throw new Error("FLOWKIT_CANDIDATE_TEST_CAPTURE is required");
 const command = process.argv[2];
-appendFileSync(join(captureDirectory, "commands.log"), `${command}\n`);
+appendFileSync(join(captureDirectory, "commands.log"), `${command}:${process.env.FLOWKIT_DEMO_CANDIDATE_TARBALLS ?? ""}\n`);
 copyFileSync("package.json", join(captureDirectory, `${command}.package.json`));
 JS
 
 cp "$demo_checkout/package.json" "$test_root/original-package.json"
+cp "$demo_checkout/fake-demo-command.mjs" "$test_root/original-fake-demo-command.mjs"
+tar -cf "$test_root/original-demo.tar" -C "$demo_checkout" .
 
 package_names=(
   "@naakwu/flowkit-auth"
@@ -76,6 +100,7 @@ FLOWKIT_CANDIDATE_TEST_CAPTURE="$capture_directory" \
   bash "$candidate_script" "$demo_checkout" "${tarballs[@]}"
 
 cmp "$test_root/original-package.json" "$demo_checkout/package.json"
+cmp "$test_root/original-fake-demo-command.mjs" "$demo_checkout/fake-demo-command.mjs"
 
 node - "${tarballs[@]}" "$capture_directory/typecheck.package.json" <<'JS'
 import { readFileSync, realpathSync } from "node:fs";
@@ -103,13 +128,16 @@ for (const packageName of packageNames) {
   if (capturedManifest.dependencies[packageName] !== expectedCandidates[packageName]) {
     throw new Error(`${packageName} was not rewritten to its exact candidate tarball`);
   }
+  if (capturedManifest.overrides[packageName] !== expectedCandidates[packageName]) {
+    throw new Error(`${packageName} was not rewritten in overrides to its exact candidate tarball`);
+  }
 }
 if (capturedManifest.dependencies.zod !== "3.25.76") {
   throw new Error("the candidate rewrite changed an unrelated dependency");
 }
 JS
 
-expected_commands=$'typecheck\ntest\nbuild\nstack:ci'
+expected_commands=$'typecheck:\ntest:true\ntest:enrolment-conformance:true\nbuild:\nstack:ci:'
 if [[ "$(cat "$capture_directory/commands.log")" != "$expected_commands" ]]; then
   printf 'unexpected demo command sequence:\n%s\n' "$(cat "$capture_directory/commands.log")" >&2
   exit 1
@@ -125,4 +153,7 @@ if FLOWKIT_CANDIDATE_TEST_CAPTURE="$capture_directory" \
 fi
 
 cmp "$test_root/original-package.json" "$demo_checkout/package.json"
+cmp "$test_root/original-fake-demo-command.mjs" "$demo_checkout/fake-demo-command.mjs"
+tar -cf "$test_root/after-demo.tar" -C "$demo_checkout" .
+cmp "$test_root/original-demo.tar" "$test_root/after-demo.tar"
 echo "demo candidate script contract passed"

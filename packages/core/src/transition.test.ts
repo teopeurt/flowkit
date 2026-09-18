@@ -63,6 +63,34 @@ describe('transition kernel', () => {
     expect(getDeclaredActions(docReviewFlow, 'published')).toEqual([]);
   });
 
+  test('global actions apply to every eligible non-final stage and respect stage opt-outs', () => {
+    const definition = {
+      id: 'global-actions',
+      version: 1,
+      roles: [],
+      initialStage: 'draft',
+      actions: {
+        withdraw: { to: 'closed', status: 'withdrawn' },
+      },
+      stages: {
+        draft: { actions: { submit: { to: 'review' } } },
+        review: { disabledGlobalActions: ['withdraw'], actions: { return: { to: 'draft' } } },
+        closed: { final: true },
+      },
+    } as any;
+
+    expect(getDeclaredActions(definition, 'draft')).toEqual(['submit', 'withdraw']);
+    expect(getDeclaredActions(definition, 'review')).toEqual(['return']);
+    expect(getDeclaredActions(definition, 'closed')).toEqual([]);
+    expect(transition(definition, buildInitialState(definition), { action: 'withdraw' }).state)
+      .toEqual({ stage: 'closed', status: 'withdrawn', pendingRole: null, tracks: {} });
+    expect(() => transition(
+      definition,
+      { stage: 'review', status: 'pending', pendingRole: null, tracks: {} },
+      { action: 'withdraw' },
+    )).toThrow(InvalidTransitionError);
+  });
+
   test('unknown stages throw UnknownStageError', () => {
     expectError(() => getDeclaredActions(docReviewFlow, 'missing'), UnknownStageError);
   });
@@ -299,7 +327,7 @@ describe('transition kernel', () => {
 
   test('the input state is not mutated', () => {
     const state = buildInitialState(docReviewFlow);
-    const before = structuredClone(state);
+    const before = { ...state, tracks: { ...state.tracks } };
 
     transition(docReviewFlow, state, { action: 'submit' });
 

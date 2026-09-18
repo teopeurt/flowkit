@@ -5,6 +5,7 @@ export { defineFlow, FlowDefinitionError, flowSchema, formatIssues } from './sch
 export {
   AuthorizationRejectionError,
   buildInitialState,
+  getActionDefinition,
   getActionSourceStages,
   getDeclaredActions,
   GuardRejectionError,

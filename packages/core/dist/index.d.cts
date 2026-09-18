@@ -9,24 +9,29 @@ interface StepDef {
     ref: string;
     gate?: 'human';
 }
+interface NotificationDef {
+    template: string;
+    channels: string[];
+    to?: string[];
+}
+type NotificationBinding = NotificationDef | NotificationDef[];
 interface ActionDef {
     to: string;
-    kind?: 'human' | 'system';
+    kind?: 'human' | 'system' | 'signal';
     status?: string;
     pendingRole?: string | null;
     tracks?: Record<string, string>;
     guards?: string[];
     policy?: string;
-    notify?: {
-        template: string;
-        channels: string[];
-        to?: string[];
-    };
+    notify?: NotificationBinding;
 }
 interface StageDef {
     pendingRole?: string | null;
     final?: boolean;
+    steady?: boolean;
     entry?: StepDef[];
+    entryNotify?: NotificationBinding;
+    disabledGlobalActions?: string[];
     sla?: {
         after: string;
         escalate: {
@@ -43,14 +48,18 @@ interface FlowDefinition {
     tracks?: Record<string, TrackDef>;
     initialStage: string;
     initialStatus?: string;
+    actions?: Record<string, ActionDef>;
     stages: Record<string, StageDef>;
 }
 type StageName<D extends FlowDefinition> = keyof D['stages'] & string;
-type ActionName<D extends FlowDefinition> = {
+type StageActionName<D extends FlowDefinition> = {
     [S in keyof D['stages']]: D['stages'][S] extends {
         actions?: infer A;
     } ? keyof NonNullable<A> & string : never;
 }[keyof D['stages']];
+type ActionName<D extends FlowDefinition> = StageActionName<D> | (D extends {
+    actions?: infer A;
+} ? keyof NonNullable<A> & string : never);
 interface FlowCommand {
     action: string;
     actorId?: string;
@@ -92,7 +101,7 @@ type Guard = (ctx: PredicateContext) => boolean;
 type GuardRegistry = Record<string, Guard>;
 type AuthorizationPolicy = (ctx: PredicateContext) => boolean;
 type AuthorizationPolicyRegistry = Record<string, AuthorizationPolicy>;
-type LintIssueCode = 'unreachable-stage' | 'dead-end-stage' | 'final-stage-has-actions' | 'unused-role' | 'unused-track' | 'duplicate-action-source' | 'missing-guard-ref' | 'missing-policy-ref' | 'missing-step-ref' | 'missing-template-ref' | 'missing-channel-ref' | 'missing-action-policy';
+type LintIssueCode = 'unreachable-stage' | 'dead-end-stage' | 'final-stage-has-actions' | 'unused-role' | 'unused-track' | 'duplicate-action-source' | 'missing-guard-ref' | 'missing-policy-ref' | 'missing-step-ref' | 'missing-template-ref' | 'missing-channel-ref' | 'missing-action-policy' | 'unbounded-stage';
 interface LintIssue {
     code: LintIssueCode;
     severity: 'error' | 'warning';
@@ -186,9 +195,10 @@ declare class GuardRejectionError extends Error {
 }
 declare function buildInitialState(definition: FlowDefinition, overrides?: FlowStateOverrides): FlowState;
 declare function getDeclaredActions(definition: FlowDefinition, stage: string): string[];
+declare function getActionDefinition(definition: FlowDefinition, stage: string, action: string): ActionDef | undefined;
 declare function getActionSourceStages(definition: FlowDefinition, action: string): string[];
 declare function transition(definition: FlowDefinition, state: FlowState, command: FlowCommand, context?: EvaluationContext): TransitionOutcome;
 
 declare const FLOWKIT_CORE_VERSION = "0.2.0";
 
-export { type ActionDef, type ActionName, type AuthorizationPolicy, type AuthorizationPolicyRegistry, AuthorizationRejectionError, type EvaluationContext, FLOWKIT_CORE_VERSION, type FlowCommand, type FlowDefinition, FlowDefinitionError, type FlowState, type FlowStateOverrides, type Guard, type GuardRegistry, GuardRejectionError, InvalidTrackValueError, InvalidTransitionError, type LintIssue, type LintIssueCode, MissingGuardError, MissingPolicyError, type PredicateContext, type StageDef, type StageName, type StepDef, type TrackDef, type TransitionOutcome, type TransitionRecord, UnknownStageError, UnknownTrackError, buildInitialState, defineFlow, flowSchema, formatIssues, getActionSourceStages, getDeclaredActions, lintFlow, lintInterpreterFlow, transition, validateRegistryRefs };
+export { type ActionDef, type ActionName, type AuthorizationPolicy, type AuthorizationPolicyRegistry, AuthorizationRejectionError, type EvaluationContext, FLOWKIT_CORE_VERSION, type FlowCommand, type FlowDefinition, FlowDefinitionError, type FlowState, type FlowStateOverrides, type Guard, type GuardRegistry, GuardRejectionError, InvalidTrackValueError, InvalidTransitionError, type LintIssue, type LintIssueCode, MissingGuardError, MissingPolicyError, type NotificationBinding, type NotificationDef, type PredicateContext, type StageActionName, type StageDef, type StageName, type StepDef, type TrackDef, type TransitionOutcome, type TransitionRecord, UnknownStageError, UnknownTrackError, buildInitialState, defineFlow, flowSchema, formatIssues, getActionDefinition, getActionSourceStages, getDeclaredActions, lintFlow, lintInterpreterFlow, transition, validateRegistryRefs };

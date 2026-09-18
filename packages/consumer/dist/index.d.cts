@@ -8,12 +8,13 @@ interface PublishedFlowDefinition {
 }
 interface FlowkitSubject {
     id: string;
+    organizationId: string;
     metadata?: Record<string, unknown>;
 }
 interface FlowkitActorRef {
     id: string;
     roles: string[];
-    organizationId?: string;
+    organizationId: string;
 }
 interface FlowkitStepResult {
     ref: string;
@@ -41,6 +42,12 @@ interface FlowRuntime {
         flowId: string;
         action: string;
         actorId: string;
+        operationId: string;
+        comment?: string;
+    }): Promise<FlowkitStateView>;
+    signal(input: {
+        flowId: string;
+        action: string;
         operationId: string;
         comment?: string;
     }): Promise<FlowkitStateView>;
