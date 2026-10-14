@@ -37,6 +37,15 @@ const expectRejected = async (promise: Promise<unknown>) => {
   }
   throw new Error('Expected the Update to reject.');
 };
+const waitForStage = async (handle: { query: (name: string) => Promise<unknown> }, stage: string) => {
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    const current = (await handle.query('getState') as { state: { stage: string } }).state.stage;
+    if (current === stage || Date.now() > deadline) return current;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+};
+
 const testWithTimeout = test as unknown as (
   name: string,
   fn: () => Promise<void>,
@@ -199,8 +208,7 @@ describe('createFlowkitWorkflow', () => {
     try {
       testActivities.reset();
       const handle = await environment.client.workflow.start(factFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'entry-facts', args: [factFlowkitInput()] });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      expect((await handle.query('getState') as { state: { stage: string } }).state.stage).toBe('approved');
+      expect(await waitForStage(handle, 'approved')).toBe('approved');
       expect(testActivities.systemStepInputs).toEqual([{ workflowId: 'entry-facts', entryEpoch: 0, stepIndex: 0, idempotencyKey: '["entry-facts",0,0]' }]);
       await handle.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
