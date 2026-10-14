@@ -1,6 +1,6 @@
 {
   "name": "@naakwu/flowkit-notify",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": false,
   "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
