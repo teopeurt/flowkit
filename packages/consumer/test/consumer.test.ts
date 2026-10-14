@@ -20,9 +20,9 @@ const definition: PublishedFlowDefinition = {
   definitionHash: 'sha256:leave-approval',
 };
 
-const subject: FlowkitSubject = { id: 'leave-1' };
-const employee: FlowkitActorRef = { id: 'employee-browser-id', roles: ['untrusted-browser-role'] };
-const manager: FlowkitActorRef = { id: 'manager-browser-id', roles: ['employee', 'super_admin'] };
+const subject: FlowkitSubject = { id: 'leave-1', organizationId: 'org-1' };
+const employee: FlowkitActorRef = { id: 'employee-browser-id', roles: ['untrusted-browser-role'], organizationId: 'org-1' };
+const manager: FlowkitActorRef = { id: 'manager-browser-id', roles: ['employee', 'super_admin'], organizationId: 'org-1' };
 const state: FlowkitStateView = {
   state: { stage: 'employee', status: 'active', pendingRole: 'employee', tracks: {} },
   sequence: 0,
@@ -40,6 +40,10 @@ function fakeRuntime(calls: string[]): FlowRuntime {
     act: async ({ operationId, actorId }) => {
       expect(actorId).toBe('employee-server-id');
       calls.push(`act:${operationId}`);
+      return state;
+    },
+    signal: async ({ operationId }) => {
+      calls.push(`signal:${operationId}`);
       return state;
     },
     get: async () => state,
@@ -78,8 +82,8 @@ describe('createFlowkitConsumer', () => {
       actorResolver: {
         resolve: async (actorId) =>
           actorId === 'manager-browser-id'
-            ? { id: 'manager-server-id', roles: ['manager'] }
-            : { id: 'employee-server-id', roles: ['employee'] },
+            ? { id: 'manager-server-id', roles: ['manager'], organizationId: 'org-1' }
+            : { id: 'employee-server-id', roles: ['employee'], organizationId: 'org-1' },
       },
       eligibility: { canWorkRole: async () => true },
       clock: { now: () => '2026-07-29T00:00:00.000Z' },
@@ -104,7 +108,7 @@ describe('createFlowkitConsumer', () => {
       tasks: {
         inbox: async () => ({ items: [openAssigned, openUnassigned, claimedByManager], nextCursor: null }),
       } as unknown as TaskStore,
-      actorResolver: { resolve: async () => ({ id: 'manager-server-id', roles: ['manager'] }) },
+      actorResolver: { resolve: async () => ({ id: 'manager-server-id', roles: ['manager'], organizationId: 'org-1' }) },
       eligibility: { canWorkRole: async ({ task }) => task.id === openAssigned.id },
       clock: { now: () => '2026-07-29T00:00:00.000Z' },
       views: { read: (view) => view, readByFlowId: async () => state },

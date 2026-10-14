@@ -7,10 +7,12 @@ import { ApplicationFailure } from '@temporalio/common';
 
 export const testActivities: FlowkitActivityRegistry & {
   transitions: RecordTransitionInput[];
+  resolvedCommands: Array<{ origin: string; actorId?: string }>;
   failNextProjection: boolean;
   blockNextProjection: boolean;
   failAi: boolean;
   systemSteps: string[];
+  systemStepInputs: Array<{ workflowId: string; entryEpoch: number; stepIndex: number; idempotencyKey: string }>;
   aiSteps: string[];
   stageReady: Array<{ entryEpoch: number; slaDeadline?: number }>;
   notifications: string[];
@@ -25,20 +27,24 @@ export const testActivities: FlowkitActivityRegistry & {
   unblockProjection(): void;
 } = {
   transitions: [],
+  resolvedCommands: [],
   failNextProjection: false,
   blockNextProjection: false,
   failAi: false,
   systemSteps: [],
+  systemStepInputs: [],
   aiSteps: [],
   stageReady: [],
   notifications: [],
   failNotification: false,
   reset() {
     this.transitions.length = 0;
+    this.resolvedCommands.length = 0;
     this.failNextProjection = false;
     this.blockNextProjection = false;
     this.failAi = false;
     this.systemSteps.length = 0;
+    this.systemStepInputs.length = 0;
     this.aiSteps.length = 0;
     this.stageReady.length = 0;
     this.notifications.length = 0;
@@ -56,10 +62,21 @@ export const testActivities: FlowkitActivityRegistry & {
     this.releaseProjection?.();
   },
   async resolveActionContext(input): Promise<ResolvedActionContext> {
+    testActivities.resolvedCommands.push(input.command.actorId === undefined
+      ? { origin: input.origin }
+      : { origin: input.origin, actorId: input.command.actorId });
+    const trustedSignal = input.origin !== 'signal'
+      || input.operationId === 'trusted-signal'
+      || input.operationId === 'cross-org-signal';
     return {
-      actor: {
-        id: input.command.comment === 'unauthorized' || input.command.action === 'approve' ? 'manager-1' : 'employee-1',
-        roles: [input.command.comment === 'unauthorized' || input.command.action === 'approve' ? 'manager' : 'employee'],
+      actor: !trustedSignal ? undefined : {
+        id: input.origin === 'signal'
+          ? 'service-scheduler'
+          : input.command.comment === 'unauthorized' || input.command.action === 'approve' ? 'manager-1' : 'employee-1',
+        roles: [input.origin === 'signal'
+          ? 'scheduler'
+          : input.command.comment === 'unauthorized' || input.command.action === 'approve' ? 'manager' : 'employee'],
+        organizationId: input.operationId === 'cross-org-signal' || input.command.comment === 'wrong-tenant' ? 'org-2' : 'org-1',
       },
       facts: { commentAllowed: input.command.comment !== 'blocked' },
       priorResult: testActivities.priorResult,
@@ -81,6 +98,8 @@ export const testActivities: FlowkitActivityRegistry & {
   async recordStageReady(input) { testActivities.stageReady.push({ entryEpoch: input.entryEpoch, slaDeadline: input.slaDeadline }); testActivities.stageReadyResolver?.(); },
   async executeSystemStep(input) {
     testActivities.systemSteps.push(input.ref);
+    testActivities.systemStepInputs.push({ workflowId: input.workflowId, entryEpoch: input.entryEpoch, stepIndex: input.stepIndex, idempotencyKey: input.idempotencyKey });
+    if (input.ref === 'inspect') return { output: { verdict: 'pass' } };
     return { output: `system:${input.ref}` };
   },
   async executeAiStep(input) {

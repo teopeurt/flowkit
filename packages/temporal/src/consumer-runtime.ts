@@ -1,18 +1,26 @@
-import type { FlowRuntime } from '@naakwu/flowkit-consumer';
 import type { FlowCommand } from '@naakwu/flowkit-core';
 
 import type {
+  FlowkitSignalCommand,
+  FlowkitSubject,
   FlowkitStateView,
   FlowkitWorkflowInput,
+  PublishedFlowDefinition,
 } from './contracts';
 import type { FlowkitWorkflow } from './workflow';
 
 interface TemporalWorkflowHandle {
   query(name: 'getState'): Promise<FlowkitStateView>;
-  executeUpdate(
-    name: 'applyAction',
-    options: { updateId: string; args: [FlowCommand] },
-  ): Promise<FlowkitStateView>;
+  executeUpdate(name: 'applyAction', options: { updateId: string; args: [FlowCommand] }): Promise<FlowkitStateView>;
+  executeUpdate(name: 'applySignal', options: { updateId: string; args: [FlowkitSignalCommand] }): Promise<FlowkitStateView>;
+}
+
+interface TemporalRuntime {
+  start(input: { flowId: string; published: PublishedFlowDefinition; subject: FlowkitSubject; operationId: string }): Promise<FlowkitStateView>;
+  act(input: { flowId: string; action: string; actorId: string; operationId: string; comment?: string }): Promise<FlowkitStateView>;
+  signal(input: { flowId: string; action: string; operationId: string; comment?: string }): Promise<FlowkitStateView>;
+  get(input: { flowId: string }): Promise<FlowkitStateView>;
+  health(): Promise<{ ready: boolean; checkedAt: string }>;
 }
 
 /**
@@ -41,7 +49,7 @@ interface TemporalRuntimeOptions {
   healthProbe(): Promise<{ ready: boolean; checkedAt: string }>;
 }
 
-export function createFlowkitTemporalRuntime(options: TemporalRuntimeOptions): FlowRuntime {
+export function createFlowkitTemporalRuntime(options: TemporalRuntimeOptions): TemporalRuntime {
   return {
     async start(input) {
       const handle = await options.client.workflow.start(options.workflowType, {
@@ -55,6 +63,10 @@ export function createFlowkitTemporalRuntime(options: TemporalRuntimeOptions): F
     act: (input) => options.client.workflow.getHandle(input.flowId).executeUpdate('applyAction', {
       updateId: input.operationId,
       args: [{ action: input.action, actorId: input.actorId, comment: input.comment }],
+    }),
+    signal: (input) => options.client.workflow.getHandle(input.flowId).executeUpdate('applySignal', {
+      updateId: input.operationId,
+      args: [{ action: input.action, comment: input.comment }],
     }),
     get: ({ flowId }) => options.client.workflow.getHandle(flowId).query('getState'),
     health: () => options.healthProbe(),

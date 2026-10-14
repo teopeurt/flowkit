@@ -10,13 +10,14 @@ export interface PublishedFlowDefinition {
 
 export interface FlowkitSubject {
   id: string;
+  organizationId: string;
   metadata?: Record<string, unknown>;
 }
 
 export interface FlowkitActorRef {
   id: string;
   roles: string[];
-  organizationId?: string;
+  organizationId: string;
 }
 
 export interface FlowkitStepResult {
@@ -39,6 +40,7 @@ export interface FlowkitStateView {
 export interface FlowRuntime {
   start(input: { flowId: string; published: PublishedFlowDefinition; subject: FlowkitSubject; operationId: string }): Promise<FlowkitStateView>;
   act(input: { flowId: string; action: string; actorId: string; operationId: string; comment?: string }): Promise<FlowkitStateView>;
+  signal(input: { flowId: string; action: string; operationId: string; comment?: string }): Promise<FlowkitStateView>;
   get(input: { flowId: string }): Promise<FlowkitStateView>;
   health(): Promise<{ ready: boolean; checkedAt: string }>;
 }

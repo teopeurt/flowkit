@@ -8,6 +8,8 @@ import {
   blockedRuleFlowkitWorkflow,
   entryFlowkitInput,
   entryFlowkitWorkflow,
+  factFlowkitInput,
+  factFlowkitWorkflow,
   loopFlowkitInput,
   loopFlowkitWorkflow,
   notifySlaInput,
@@ -18,6 +20,10 @@ import {
   continuationInput,
   continuationWorkflow,
   ruleFlowkitWorkflow,
+  updateRuleFlowkitInput,
+  updateRuleFlowkitWorkflow,
+  signalFlowkitInput,
+  signalFlowkitWorkflow,
   testFlowkitInput,
   testFlowkitWorkflow,
 } from './testing/interpreter.fixture';
@@ -31,6 +37,15 @@ const expectRejected = async (promise: Promise<unknown>) => {
   }
   throw new Error('Expected the Update to reject.');
 };
+const waitForStage = async (handle: { query: (name: string) => Promise<unknown> }, stage: string) => {
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    const current = (await handle.query('getState') as { state: { stage: string } }).state.stage;
+    if (current === stage || Date.now() > deadline) return current;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+};
+
 const testWithTimeout = test as unknown as (
   name: string,
   fn: () => Promise<void>,
@@ -128,6 +143,22 @@ describe('createFlowkitWorkflow', () => {
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
   }, 30_000);
 
+  testWithTimeout('records action and destination entry notifications in transition order', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(testFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'entry-notifications', args: [testFlowkitInput()] });
+      await handle.executeUpdate('applyAction', { updateId: 'submit-notify', args: [{ action: 'submit', comment: 'allowed' }] });
+      expect(testActivities.transitions[0].notifications).toEqual([
+        { template: 'submitted', channels: ['inbox'] },
+        { template: 'reviewReady', channels: ['inbox'] },
+      ]);
+      await handle.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
   testWithTimeout('returns a prior projection result for a duplicate operation without recording another transition', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
@@ -170,6 +201,96 @@ describe('createFlowkitWorkflow', () => {
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
   }, 30_000);
 
+  testWithTimeout('passes completed entry-step object output to later rules with a stable idempotency key', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(factFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'entry-facts', args: [factFlowkitInput()] });
+      expect(await waitForStage(handle, 'approved')).toBe('approved');
+      expect(testActivities.systemStepInputs).toEqual([{ workflowId: 'entry-facts', entryEpoch: 0, stepIndex: 0, idempotencyKey: '["entry-facts",0,0]' }]);
+      await handle.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
+  testWithTimeout('includes workflow identity in entry-step idempotency keys', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const first = await environment.client.workflow.start(factFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'entry-key-first', args: [factFlowkitInput()] });
+      const second = await environment.client.workflow.start(factFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'entry-key-second', args: [factFlowkitInput()] });
+      await Promise.all([first.result(), second.result()]);
+
+      expect(testActivities.systemStepInputs.length).toBe(2);
+      expect(new Set(testActivities.systemStepInputs.map((step) => step.idempotencyKey)).size).toBe(2);
+      expect(testActivities.systemStepInputs.map((step) => ({ workflowId: step.workflowId, entryEpoch: step.entryEpoch, stepIndex: step.stepIndex })).sort((a, b) => a.workflowId.localeCompare(b.workflowId))).toEqual([
+        { workflowId: 'entry-key-first', entryEpoch: 0, stepIndex: 0 },
+        { workflowId: 'entry-key-second', entryEpoch: 0, stepIndex: 0 },
+      ]);
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
+  testWithTimeout('rejects a human actor from another organization before projection', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(testFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'tenant-rejection', args: [testFlowkitInput()] });
+      await expectRejected(handle.executeUpdate('applyAction', { updateId: 'wrong-tenant', args: [{ action: 'submit', comment: 'wrong-tenant' }] }));
+      expect(testActivities.transitions).toEqual([]);
+      await handle.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
+  testWithTimeout('rejects an untrusted signal caller without an activity-resolved actor', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(signalFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'signal-untrusted', args: [signalFlowkitInput()] });
+      await expectRejected(handle.executeUpdate('applySignal', { updateId: 'untrusted-signal', args: [{ action: 'refresh', comment: 'caller-spoof' }] }));
+
+      expect(testActivities.resolvedCommands).toContainEqual({ origin: 'signal' });
+      expect(testActivities.transitions).toEqual([]);
+      await handle.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
+  testWithTimeout('accepts a trusted activity-resolved same-organization signal', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(signalFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'signal-trusted', args: [signalFlowkitInput()] });
+      await handle.executeUpdate('applySignal', { updateId: 'trusted-signal', args: [{ action: 'refresh' }] });
+
+      expect(testActivities.resolvedCommands).toContainEqual({ origin: 'signal' });
+      expect(testActivities.transitions[0].origin).toBe('signal');
+      expect(testActivities.transitions[0].command.actorId).toBe('service-scheduler');
+      await handle.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
+  testWithTimeout('rejects a trusted signal actor from another organization before projection', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(signalFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'signal-wrong-tenant', args: [signalFlowkitInput()] });
+      await expectRejected(handle.executeUpdate('applySignal', { updateId: 'cross-org-signal', args: [{ action: 'refresh' }] }));
+
+      expect(testActivities.transitions).toEqual([]);
+      await handle.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
   testWithTimeout('records human-gated AI output and degrades failed AI work without accepting an action', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
@@ -206,6 +327,19 @@ describe('createFlowkitWorkflow', () => {
       expect((await blocked.query('getState') as { state: { stage: string } }).state.stage).toBe('draft');
       expect(testActivities.transitions.length).toBe(0);
       await blocked.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
+  testWithTimeout('resolves an update after its destination entry rule has projected', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(updateRuleFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'rule-after-update', args: [updateRuleFlowkitInput()] });
+      const result = await handle.executeUpdate('applyAction', { updateId: 'submit-and-auto', args: [{ action: 'submit', comment: 'allowed' }] }) as { state: { stage: string } };
+      expect(result.state.stage).toBe('approved');
+      expect(testActivities.transitions.map((transition) => transition.origin)).toEqual(['human', 'rule']);
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
   }, 30_000);
 

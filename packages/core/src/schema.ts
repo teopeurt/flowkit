@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type {
   ActionDef,
   FlowDefinition,
+  NotificationBinding,
   StageDef,
   StepDef,
   TrackDef,
@@ -40,16 +41,21 @@ const notificationSchema = z
   })
   .strict();
 
+const notificationBindingSchema: z.ZodType<NotificationBinding> = z.union([
+  notificationSchema,
+  z.array(notificationSchema).min(1),
+]);
+
 const actionDefSchema: z.ZodType<ActionDef> = z
   .object({
     to: z.string(),
-    kind: z.enum(['human', 'system']).optional(),
+    kind: z.enum(['human', 'system', 'signal']).optional(),
     status: z.string().optional(),
     pendingRole: z.string().nullable().optional(),
     tracks: z.record(z.string()).optional(),
     guards: z.array(z.string()).optional(),
     policy: z.string().optional(),
-    notify: notificationSchema.optional(),
+    notify: notificationBindingSchema.optional(),
   })
   .strict();
 
@@ -71,7 +77,10 @@ const stageDefSchema: z.ZodType<StageDef> = z
   .object({
     pendingRole: z.string().nullable().optional(),
     final: z.boolean().optional(),
+    steady: z.boolean().optional(),
     entry: z.array(stepDefSchema).optional(),
+    entryNotify: notificationBindingSchema.optional(),
+    disabledGlobalActions: z.array(z.string()).optional(),
     sla: slaSchema.optional(),
     actions: z.record(actionDefSchema).optional(),
   })
@@ -113,6 +122,7 @@ export const flowSchema: z.ZodType<FlowDefinition> = z
     tracks: z.record(trackDefSchema).optional(),
     initialStage: z.string(),
     initialStatus: z.string().optional(),
+    actions: z.record(actionDefSchema).optional(),
     stages: z.record(stageDefSchema),
   })
   .strict()
@@ -120,6 +130,7 @@ export const flowSchema: z.ZodType<FlowDefinition> = z
     const stageNames = Object.keys(definition.stages);
     const declaredRoles = new Set(definition.roles);
     const declaredTracks = definition.tracks ?? {};
+    const globalActions = definition.actions ?? {};
 
     if (stageNames.length === 0) {
       addIssue(ctx, ['stages'], 'Expected at least one stage.');
@@ -169,6 +180,36 @@ export const flowSchema: z.ZodType<FlowDefinition> = z
         );
       }
 
+      if (stage.final && stage.steady) {
+        addIssue(
+          ctx,
+          ['stages', stageName, 'steady'],
+          `Final stage "${stageName}" cannot also be steady.`,
+        );
+      }
+
+      for (const actionName of stage.disabledGlobalActions ?? []) {
+        if (!globalActions[actionName]) {
+          addIssue(
+            ctx,
+            ['stages', stageName, 'disabledGlobalActions'],
+            `Stage "${stageName}" disables undeclared global action "${actionName}".`,
+          );
+        }
+      }
+
+      for (const notification of notificationBindings(stage.entryNotify)) {
+        for (const role of notification.to ?? []) {
+          if (!declaredRoles.has(role)) {
+            addIssue(
+              ctx,
+              ['stages', stageName, 'entryNotify', 'to'],
+              `Stage "${stageName}" entry notification targets undeclared role "${role}".`,
+            );
+          }
+        }
+      }
+
       for (const [actionName, action] of Object.entries(stage.actions ?? {})) {
         if (!stageNames.includes(action.to)) {
           addIssue(
@@ -186,7 +227,7 @@ export const flowSchema: z.ZodType<FlowDefinition> = z
           );
         }
 
-        for (const role of action.notify?.to ?? []) {
+        for (const role of notificationBindings(action.notify).flatMap((notification) => notification.to ?? [])) {
           if (!declaredRoles.has(role)) {
             addIssue(
               ctx,
@@ -241,13 +282,16 @@ export const flowSchema: z.ZodType<FlowDefinition> = z
       }
 
       if (escalate.action) {
-        const escalateTarget = stage.actions?.[escalate.action];
+        const escalateTarget = stage.actions?.[escalate.action]
+          ?? (stage.disabledGlobalActions?.includes(escalate.action)
+            ? undefined
+            : globalActions[escalate.action]);
 
         if (!escalateTarget) {
           addIssue(
             ctx,
             ['stages', stageName, 'sla', 'escalate', 'action'],
-            `Stage "${stageName}" SLA action "${escalate.action}" is not declared on the same stage.`,
+            `Stage "${stageName}" SLA action "${escalate.action}" is not declared on the stage or as an eligible top-level action.`,
           );
         } else if ((escalateTarget.kind ?? 'human') !== 'system') {
           addIssue(
@@ -258,7 +302,33 @@ export const flowSchema: z.ZodType<FlowDefinition> = z
         }
       }
     }
+
+
+    for (const [actionName, action] of Object.entries(globalActions)) {
+      if (!stageNames.includes(action.to)) {
+        addIssue(ctx, ['actions', actionName, 'to'], `Global action "${actionName}" targets unknown stage "${action.to}".`);
+      }
+      if (action.pendingRole && !declaredRoles.has(action.pendingRole)) {
+        addIssue(ctx, ['actions', actionName, 'pendingRole'], `Global action "${actionName}" references undeclared role "${action.pendingRole}".`);
+      }
+      for (const role of notificationBindings(action.notify).flatMap((notification) => notification.to ?? [])) {
+        if (!declaredRoles.has(role)) {
+          addIssue(ctx, ['actions', actionName, 'notify', 'to'], `Global action "${actionName}" notification targets undeclared role "${role}".`);
+        }
+      }
+      for (const [trackName, trackValue] of Object.entries(action.tracks ?? {})) {
+        const declaredTrack = declaredTracks[trackName];
+        if (!declaredTrack) {
+          addIssue(ctx, ['actions', actionName, 'tracks', trackName], `Global action "${actionName}" updates undeclared track "${trackName}".`);
+        } else if (!declaredTrack.values.includes(trackValue)) {
+          addIssue(ctx, ['actions', actionName, 'tracks', trackName], `Global action "${actionName}" assigns undeclared value "${trackValue}" to track "${trackName}".`);
+        }
+      }
+    }
   });
+
+const notificationBindings = (binding: NotificationBinding | undefined) =>
+  binding === undefined ? [] : Array.isArray(binding) ? binding : [binding];
 
 export class FlowDefinitionError extends Error {
   constructor(message: string) {

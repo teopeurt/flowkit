@@ -49,7 +49,7 @@ For a local sibling override, replace the affected dependency in the consuming w
 
 ## Releases
 
-All six packages are pinned to the initial lockstep release version, `0.2.0`. The first private publication uses Changesets' publish plan to publish those existing manifest versions, rather than creating a synthetic version bump. A release builds and checks packed artifacts before publishing to GitHub Packages. Phase 2 remains private-package distribution; public npm publication is explicitly deferred to Phase 4.
+All six packages are pinned to the initial lockstep release version, `1.0.0`. The first private publication uses Changesets' publish plan to publish those existing manifest versions, rather than creating a synthetic version bump. A release builds and checks packed artifacts before publishing to GitHub Packages. Phase 2 remains private-package distribution; public npm publication is explicitly deferred to Phase 4.
 
 ## Contributing and security
 

@@ -64,6 +64,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build packages
+        run: bun run build
+
       - name: Generate the registry-backed publish plan
         id: publish_plan
         env:
@@ -88,16 +91,6 @@ jobs:
           bun run build
           bun run pack:check
 
-      - name: Pack durable demo candidates
-        if: steps.publish_plan.outputs.has_releases == 'true'
-        run: |
-          mkdir -p candidate-tarballs
-          for package in auth consumer core notify tasks temporal; do
-            mkdir -p "candidate-tarballs/$package"
-            (cd "packages/$package" && bun pm pack \
-              --destination "$GITHUB_WORKSPACE/candidate-tarballs/$package")
-          done
-
       - name: Check out FlowKit demo
         if: steps.publish_plan.outputs.has_releases == 'true'
         uses: actions/checkout@v4
@@ -106,12 +99,38 @@ jobs:
           path: flowkit-demo
           token: ${{ secrets.FLOWKIT_DEMO_READ_TOKEN || secrets.GITHUB_TOKEN }}
 
+      - name: Install Chromium for the candidate stack gate
+        if: steps.publish_plan.outputs.has_releases == 'true'
+        run: bunx playwright install --with-deps chromium
+
       - name: Test the exact candidates in the demo
         if: steps.publish_plan.outputs.has_releases == 'true'
         run: |
+          set -euo pipefail
+          bun run version:check
+          bun run build
+
+          candidate_root="$(mktemp -d "$RUNNER_TEMP/flowkit-candidate.XXXXXX")"
+          cleanup() { rm -rf "$candidate_root"; }
+          trap cleanup EXIT
+
+          packages=(auth consumer core notify tasks temporal)
           candidate_tarballs=()
-          for package in auth consumer core notify tasks temporal; do
-            candidate_tarballs+=("$(find "$GITHUB_WORKSPACE/candidate-tarballs/$package" -maxdepth 1 -name '*.tgz' -print -quit)")
+          expected_version="$(node -e 'const fs = require("node:fs"); const names = ["auth", "consumer", "core", "notify", "tasks", "temporal"]; const manifests = names.map((name) => JSON.parse(fs.readFileSync(`packages/${name}/package.json`, "utf8"))); const versions = new Set(manifests.map(({ version }) => version)); if (versions.size !== 1) throw new Error("candidate package versions are not lockstep"); process.stdout.write(manifests[0].version);')"
+          for package in "${packages[@]}"; do
+            mkdir -p "$candidate_root/$package"
+            (cd "packages/$package" && bun pm pack --destination "$candidate_root/$package")
+            tarball="$(find "$candidate_root/$package" -maxdepth 1 -type f -name '*.tgz' -print -quit)"
+            if [[ -z "$tarball" ]]; then
+              echo "no candidate tarball produced for $package" >&2
+              exit 1
+            fi
+            candidate_version="$(node -e 'const fs = require("node:fs"); const cp = require("node:child_process"); const tarball = process.argv[1]; const manifest = JSON.parse(cp.execFileSync("tar", ["-xOf", tarball, "package/package.json"], { encoding: "utf8" })); process.stdout.write(manifest.version);' "$tarball")"
+            if [[ "$candidate_version" != "$expected_version" ]]; then
+              echo "candidate $package is $candidate_version, expected $expected_version" >&2
+              exit 1
+            fi
+            candidate_tarballs+=("$(realpath "$tarball")")
           done
           bash scripts/test-demo-candidate.sh \
             "$GITHUB_WORKSPACE/flowkit-demo" \

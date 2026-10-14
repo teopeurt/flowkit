@@ -1,6 +1,6 @@
 {
   "name": "@naakwu/flowkit-temporal",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": false,
   "publishConfig": { "registry": "https://npm.pkg.github.com" },
   "type": "module",
@@ -35,6 +35,8 @@
     "@temporalio/workflow": "1.16.2"
   },
   "devDependencies": {
+    "@temporalio/client": "1.16.2",
+    "@temporalio/common": "1.16.2",
     "@temporalio/testing": "1.16.2",
     "@temporalio/worker": "1.16.2",
     "tsup": "^8.5.0",

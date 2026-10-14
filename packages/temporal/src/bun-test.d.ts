@@ -4,6 +4,7 @@ declare module 'bun:test' {
     toEqual(expected: unknown): void;
     toThrow(expected?: unknown): void;
     toContainEqual(expected: unknown): void;
+    toMatchObject(expected: unknown): void;
   }
 
   interface Expect {
@@ -21,6 +22,7 @@ declare module 'bun:test' {
   export const describe: (name: string, fn: () => void) => void;
   export const expect: Expect;
   export const test: Test;
+  export const it: Test;
   export const beforeAll: (fn: () => void | Promise<void>) => void;
   export const afterAll: (fn: () => void | Promise<void>) => void;
 }

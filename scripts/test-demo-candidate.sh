@@ -51,7 +51,6 @@ trap cleanup EXIT INT TERM
 mkdir -p "$temporary_demo"
 cp -R "$demo_checkout/." "$temporary_demo"
 rm -rf "$temporary_demo/.git" "$temporary_demo/node_modules"
-rm -f "$temporary_demo/bun.lock" "$temporary_demo/bun.lockb"
 
 node - "$temporary_demo/package.json" "${package_names[@]}" -- "${tarballs[@]}" <<'JS'
 import { readFileSync, writeFileSync } from "node:fs";
@@ -83,5 +82,6 @@ bun install --lockfile-only
 bun install --frozen-lockfile
 bun run typecheck
 FLOWKIT_DEMO_CANDIDATE_TARBALLS=true bun run test
+FLOWKIT_DEMO_CANDIDATE_TARBALLS=true bun run test:enrolment-conformance
 bun run build
-bun run stack:ci
+CI=true NODE_ENV=test bun run stack:ci
