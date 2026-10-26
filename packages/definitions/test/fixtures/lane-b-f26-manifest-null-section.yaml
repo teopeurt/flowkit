@@ -1,0 +1,2 @@
+# Manifest with an empty policies section: an empty section declares no names.
+policies:

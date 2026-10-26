@@ -1,0 +1,14 @@
+id: minimal-flow
+version: .inf
+roles: [requester]
+initialStage: draft
+stages:
+  draft:
+    pendingRole: requester
+    actions:
+      submit:
+        to: submitted
+        kind: human
+        policy: requester_can_submit
+  submitted:
+    final: true

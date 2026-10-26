@@ -1,0 +1,3 @@
+# Manifest declares the policy name "010" quoted: the authoring-safe form.
+policies:
+  "010": {}

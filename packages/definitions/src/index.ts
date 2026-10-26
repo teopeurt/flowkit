@@ -27,6 +27,7 @@ export {
   FlowDefinitionFileError,
   FlowDefinitionYamlError,
   loadFlowFile,
+  MAX_DEFINITION_BYTES,
   parseFlowYaml,
 } from './yaml';
 export type {

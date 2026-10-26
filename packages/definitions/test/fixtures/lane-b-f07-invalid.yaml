@@ -1,0 +1,15 @@
+id: probe-flow
+version: 1
+roles: [requester]
+initialStage: draft
+stages:
+  draft:
+    pendingRole: requester
+    bogusKey: 1
+    actions:
+      submit:
+        to: submitted
+        kind: human
+        policy: requester_can_submit
+  submitted:
+    final: true

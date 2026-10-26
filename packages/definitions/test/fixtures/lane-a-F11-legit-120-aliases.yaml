@@ -1,0 +1,372 @@
+id: probe-flow
+version: 1
+roles: [requester]
+initialStage: draft
+stages:
+  draft:
+    pendingRole: requester
+    actions:
+      submit:
+        to: s0
+        kind: human
+        policy: requester_can_submit
+  s0:
+    final: true
+    entryNotify: &n {template: t, channels: [inbox]}
+  s1:
+    final: true
+    entryNotify: *n
+  s2:
+    final: true
+    entryNotify: *n
+  s3:
+    final: true
+    entryNotify: *n
+  s4:
+    final: true
+    entryNotify: *n
+  s5:
+    final: true
+    entryNotify: *n
+  s6:
+    final: true
+    entryNotify: *n
+  s7:
+    final: true
+    entryNotify: *n
+  s8:
+    final: true
+    entryNotify: *n
+  s9:
+    final: true
+    entryNotify: *n
+  s10:
+    final: true
+    entryNotify: *n
+  s11:
+    final: true
+    entryNotify: *n
+  s12:
+    final: true
+    entryNotify: *n
+  s13:
+    final: true
+    entryNotify: *n
+  s14:
+    final: true
+    entryNotify: *n
+  s15:
+    final: true
+    entryNotify: *n
+  s16:
+    final: true
+    entryNotify: *n
+  s17:
+    final: true
+    entryNotify: *n
+  s18:
+    final: true
+    entryNotify: *n
+  s19:
+    final: true
+    entryNotify: *n
+  s20:
+    final: true
+    entryNotify: *n
+  s21:
+    final: true
+    entryNotify: *n
+  s22:
+    final: true
+    entryNotify: *n
+  s23:
+    final: true
+    entryNotify: *n
+  s24:
+    final: true
+    entryNotify: *n
+  s25:
+    final: true
+    entryNotify: *n
+  s26:
+    final: true
+    entryNotify: *n
+  s27:
+    final: true
+    entryNotify: *n
+  s28:
+    final: true
+    entryNotify: *n
+  s29:
+    final: true
+    entryNotify: *n
+  s30:
+    final: true
+    entryNotify: *n
+  s31:
+    final: true
+    entryNotify: *n
+  s32:
+    final: true
+    entryNotify: *n
+  s33:
+    final: true
+    entryNotify: *n
+  s34:
+    final: true
+    entryNotify: *n
+  s35:
+    final: true
+    entryNotify: *n
+  s36:
+    final: true
+    entryNotify: *n
+  s37:
+    final: true
+    entryNotify: *n
+  s38:
+    final: true
+    entryNotify: *n
+  s39:
+    final: true
+    entryNotify: *n
+  s40:
+    final: true
+    entryNotify: *n
+  s41:
+    final: true
+    entryNotify: *n
+  s42:
+    final: true
+    entryNotify: *n
+  s43:
+    final: true
+    entryNotify: *n
+  s44:
+    final: true
+    entryNotify: *n
+  s45:
+    final: true
+    entryNotify: *n
+  s46:
+    final: true
+    entryNotify: *n
+  s47:
+    final: true
+    entryNotify: *n
+  s48:
+    final: true
+    entryNotify: *n
+  s49:
+    final: true
+    entryNotify: *n
+  s50:
+    final: true
+    entryNotify: *n
+  s51:
+    final: true
+    entryNotify: *n
+  s52:
+    final: true
+    entryNotify: *n
+  s53:
+    final: true
+    entryNotify: *n
+  s54:
+    final: true
+    entryNotify: *n
+  s55:
+    final: true
+    entryNotify: *n
+  s56:
+    final: true
+    entryNotify: *n
+  s57:
+    final: true
+    entryNotify: *n
+  s58:
+    final: true
+    entryNotify: *n
+  s59:
+    final: true
+    entryNotify: *n
+  s60:
+    final: true
+    entryNotify: *n
+  s61:
+    final: true
+    entryNotify: *n
+  s62:
+    final: true
+    entryNotify: *n
+  s63:
+    final: true
+    entryNotify: *n
+  s64:
+    final: true
+    entryNotify: *n
+  s65:
+    final: true
+    entryNotify: *n
+  s66:
+    final: true
+    entryNotify: *n
+  s67:
+    final: true
+    entryNotify: *n
+  s68:
+    final: true
+    entryNotify: *n
+  s69:
+    final: true
+    entryNotify: *n
+  s70:
+    final: true
+    entryNotify: *n
+  s71:
+    final: true
+    entryNotify: *n
+  s72:
+    final: true
+    entryNotify: *n
+  s73:
+    final: true
+    entryNotify: *n
+  s74:
+    final: true
+    entryNotify: *n
+  s75:
+    final: true
+    entryNotify: *n
+  s76:
+    final: true
+    entryNotify: *n
+  s77:
+    final: true
+    entryNotify: *n
+  s78:
+    final: true
+    entryNotify: *n
+  s79:
+    final: true
+    entryNotify: *n
+  s80:
+    final: true
+    entryNotify: *n
+  s81:
+    final: true
+    entryNotify: *n
+  s82:
+    final: true
+    entryNotify: *n
+  s83:
+    final: true
+    entryNotify: *n
+  s84:
+    final: true
+    entryNotify: *n
+  s85:
+    final: true
+    entryNotify: *n
+  s86:
+    final: true
+    entryNotify: *n
+  s87:
+    final: true
+    entryNotify: *n
+  s88:
+    final: true
+    entryNotify: *n
+  s89:
+    final: true
+    entryNotify: *n
+  s90:
+    final: true
+    entryNotify: *n
+  s91:
+    final: true
+    entryNotify: *n
+  s92:
+    final: true
+    entryNotify: *n
+  s93:
+    final: true
+    entryNotify: *n
+  s94:
+    final: true
+    entryNotify: *n
+  s95:
+    final: true
+    entryNotify: *n
+  s96:
+    final: true
+    entryNotify: *n
+  s97:
+    final: true
+    entryNotify: *n
+  s98:
+    final: true
+    entryNotify: *n
+  s99:
+    final: true
+    entryNotify: *n
+  s100:
+    final: true
+    entryNotify: *n
+  s101:
+    final: true
+    entryNotify: *n
+  s102:
+    final: true
+    entryNotify: *n
+  s103:
+    final: true
+    entryNotify: *n
+  s104:
+    final: true
+    entryNotify: *n
+  s105:
+    final: true
+    entryNotify: *n
+  s106:
+    final: true
+    entryNotify: *n
+  s107:
+    final: true
+    entryNotify: *n
+  s108:
+    final: true
+    entryNotify: *n
+  s109:
+    final: true
+    entryNotify: *n
+  s110:
+    final: true
+    entryNotify: *n
+  s111:
+    final: true
+    entryNotify: *n
+  s112:
+    final: true
+    entryNotify: *n
+  s113:
+    final: true
+    entryNotify: *n
+  s114:
+    final: true
+    entryNotify: *n
+  s115:
+    final: true
+    entryNotify: *n
+  s116:
+    final: true
+    entryNotify: *n
+  s117:
+    final: true
+    entryNotify: *n
+  s118:
+    final: true
+    entryNotify: *n
+  s119:
+    final: true
+    entryNotify: *n

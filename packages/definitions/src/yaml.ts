@@ -1,15 +1,20 @@
-import { readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { open } from 'node:fs/promises';
+import type { FileHandle } from 'node:fs/promises';
 
 import { flowSchema } from '@naakwu/flowkit-core';
 import type { FlowDefinition } from '@naakwu/flowkit-core';
 import {
+  isAlias,
   isMap,
+  isNode,
   isScalar,
   isSeq,
   LineCounter,
   parseAllDocuments,
+  visit,
 } from 'yaml';
-import type { Pair, ParsedNode, Range, Scalar } from 'yaml';
+import type { Alias, Pair, ParsedNode, Range, Scalar } from 'yaml';
 
 /**
  * One location (line, column) inside a YAML source, both 1-indexed.
@@ -49,9 +54,9 @@ export class FlowDefinitionYamlError extends Error {
 
 /**
  * Thrown when a definition file cannot be read (missing, permission denied,
- * or another I/O failure). Distinguishable from {@link FlowDefinitionYamlError}
- * so callers can treat "cannot open the file" and "the file is not a valid
- * definition" as different failure classes.
+ * not a regular file, or another I/O failure). Distinguishable from
+ * {@link FlowDefinitionYamlError} so callers can treat "cannot open the file"
+ * and "the file is not a valid definition" as different failure classes.
  */
 export class FlowDefinitionFileError extends Error {
   constructor(
@@ -92,6 +97,32 @@ export interface ParsedFlowYaml {
   structure: YamlStructure;
 }
 
+/**
+ * Largest definition source the loader accepts, in UTF-8 bytes. A larger file
+ * is rejected before it is parsed, so one request cannot make the loader
+ * allocate an unbounded document.
+ */
+export const MAX_DEFINITION_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Upper bound on how many times one anchor may be expanded through aliases.
+ * Anchors are legal (a definition may reuse a shared block), but a chain of
+ * aliases that refer to aliases would otherwise expand exponentially.
+ */
+const MAX_ALIAS_COUNT = 1000;
+
+const CORE_TAG_PREFIX = 'tag:yaml.org,2002:';
+
+/**
+ * The only explicit tags a definition may carry: the YAML core failsafe and
+ * JSON types. Any other tag (`!foo`, `!!js/function`, `!!timestamp`, `!!set`,
+ * ...) either names no type the loader knows or changes the value the author
+ * wrote, so it is rejected at the tagged node.
+ */
+const ALLOWED_TAGS: ReadonlySet<string> = new Set(
+  ['str', 'int', 'float', 'bool', 'null', 'map', 'seq'].map((name) => `${CORE_TAG_PREFIX}${name}`),
+);
+
 /* -------------------------------------------------------------------------- */
 /* Parsing                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -103,12 +134,20 @@ export interface ParsedFlowYaml {
  * so a word-boolean or a numeric-looking scalar written where the strict schema
  * expects a string fails validation instead of being silently accepted as a
  * string. Merge keys are disabled here so `<<` survives as an ordinary key and
- * can be rejected explicitly (see {@link collectMergeKeys}).
+ * can be rejected explicitly (see {@link auditStructure}).
+ *
+ * `uniqueKeys` is off because the parser's own duplicate check compares keys
+ * with a linear scan per key, which is quadratic on large mappings. Duplicates
+ * are detected in {@link auditStructure} instead, in one pass, on the text of
+ * each key, which is what the loader actually keeps.
  */
 const PARSE_OPTIONS = {
   merge: false,
   schema: 'yaml-1.1',
+  uniqueKeys: false,
 } as const;
+
+type ParsedDocument = ReturnType<typeof parseAllDocuments>[number];
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -136,8 +175,35 @@ const lineCol = (
   return { line: position.line, column: position.col };
 };
 
+/**
+ * Per-mapping index from a key's text to its first pair. It is built once for
+ * each mapping and reused, so attributing N keys to one mapping costs O(N)
+ * rather than O(N²).
+ */
+const pairIndexes = new WeakMap<object, Map<string, Pair>>();
+
+const pairIndex = (map: { items: Pair[] }): Map<string, Pair> => {
+  const cached = pairIndexes.get(map);
+  if (cached) {
+    return cached;
+  }
+
+  const index = new Map<string, Pair>();
+  for (const item of map.items) {
+    if (isScalar(item.key)) {
+      const text = String(item.key.value);
+      if (!index.has(text)) {
+        index.set(text, item);
+      }
+    }
+  }
+
+  pairIndexes.set(map, index);
+  return index;
+};
+
 const findPair = (map: { items: Pair[] }, key: string): Pair | undefined =>
-  map.items.find((item) => isScalar(item.key) && String(item.key.value) === key);
+  pairIndex(map).get(key);
 
 /**
  * Returns the node at `path` (a Zod path: map keys as strings, sequence indices
@@ -176,98 +242,318 @@ const locateNode = (
   return current ?? undefined;
 };
 
-const keyName = (node: ParsedNode): string =>
-  isScalar(node) ? (typeof node.value === 'symbol' ? '<<' : String(node.value)) : '<non-scalar>';
-
-/**
- * The YAML 1.1 schema resolves `<<` into a special symbol-valued scalar rather
- * than a plain string, so a merge key is identified by either form.
- */
-const isMergeKey = (key: unknown): boolean => {
-  if (!isScalar(key)) {
-    return false;
-  }
-
-  const value = key.value;
-  return value === '<<' || typeof value === 'symbol';
-};
-
-/**
- * Collects every `<<` merge key in the document. Merge keys are rejected so a
- * definition states every field it actually sets: a merged block hides the
- * effective shape from review and makes it possible to change a definition's
- * content without any of the changed fields appearing under the stage that owns
- * them.
- */
-const collectMergeKeys = (
-  node: ParsedNode | null | undefined,
-  issues: FlowDefinitionYamlIssue[],
-  lineCounter: LineCounter,
-  path: string,
-): void => {
-  if (node == null) {
-    return;
-  }
-
-  if (isMap(node)) {
-    for (const item of node.items) {
-      if (isMergeKey(item.key)) {
-        issues.push({
-          path: path === '' ? '<root>' : path,
-          message: 'Merge keys (`<<`) are not allowed; declare every field explicitly.',
-          ...(lineCol(lineCounter, item.key.range) ?? {}),
-        });
-      }
-      collectMergeKeys(item.value, issues, lineCounter, childPath(path, keyName(item.key)));
-    }
-  } else if (isSeq(node)) {
-    node.items.forEach((value, index) =>
-      collectMergeKeys(value, issues, lineCounter, `${path}[${index}]`),
-    );
-  }
-};
-
 const childPath = (parent: string, segment: string): string =>
   parent === '' ? segment : `${parent}.${segment}`;
+
+const issuePath = (path: string): string => (path === '' ? '<root>' : path);
 
 const formatPath = (path: ReadonlyArray<string | number>): string =>
   path.length === 0 ? '<root>' : path.map(String).join('.');
 
-/**
- * Maps a single `flowSchema` issue (a Zod issue) to one or more YAML issues with
- * line/column attached. Unknown-key issues are expanded to one issue per unknown
- * key so each is attributed to its own line.
- */
-const zodIssueToYamlIssues = (
-  issue: { code: string; path: Array<string | number>; message: string; keys?: string[] },
-  root: ParsedNode,
-  lineCounter: LineCounter,
-): FlowDefinitionYamlIssue[] => {
-  if (issue.code === 'unrecognized_keys') {
-    const parent = locateNode(root, issue.path);
-    const keys = issue.keys ?? [];
+/** `!!js/function` for a core-namespace tag, the raw tag otherwise (`!foo`). */
+const tagDisplay = (tag: string): string =>
+  tag.startsWith(CORE_TAG_PREFIX) ? `!!${tag.slice(CORE_TAG_PREFIX.length)}` : tag;
 
-    if (parent && isMap(parent) && keys.length > 0) {
-      return keys.map((key) => {
-        const pair = findPair(parent, key);
-        return {
-          path: formatPath([...issue.path, key]),
-          message: `Unrecognized key "${key}".`,
-          ...(lineCol(lineCounter, (pair?.key as Scalar | undefined)?.range ?? parent.range) ?? {}),
-        };
+/**
+ * Resolves every alias in the document to the node it names, in one pass. The
+ * rule is the parser's own: the last anchor with the same name that appears
+ * before the alias in document order.
+ */
+const aliasTargets = (document: ParsedDocument): Map<Alias, ParsedNode> => {
+  const targets = new Map<Alias, ParsedNode>();
+  const anchors = new Map<string, ParsedNode>();
+
+  visit(document, {
+    Node(_key, node) {
+      if (isAlias(node)) {
+        const target = anchors.get(node.source);
+        if (target) {
+          targets.set(node, target);
+        }
+        return;
+      }
+
+      const anchor = (node as { anchor?: string }).anchor;
+      if (anchor !== undefined) {
+        anchors.set(anchor, node as ParsedNode);
+      }
+    },
+  });
+
+  return targets;
+};
+
+interface StructureAudit {
+  issues: FlowDefinitionYamlIssue[];
+  /** Path of every alias the walk reached, used to attribute alias-limit failures. */
+  aliasPaths: Map<Alias, string>;
+}
+
+interface WalkEntry {
+  node: unknown;
+  path: string;
+}
+
+/**
+ * One linear pass over the document that rejects, at the offending position:
+ *
+ * - a merge key (`<<`), written plain (a quoted `"<<"` is ordinary text);
+ * - a `__proto__` key at any level;
+ * - a key whose text collides with an earlier key in the same mapping
+ *   (`Map keys must be unique`), compared on the text the loader keeps;
+ * - a key that is not text (`null`, `~`, `off`, `1`, a list or a mapping),
+ *   which would otherwise be silently renamed;
+ * - an explicit tag outside the core allowlist.
+ *
+ * Aliases are not expanded here: an anchored node is audited where it is
+ * defined, so the walk is bounded by the source size, not by alias fan-out.
+ */
+const auditStructure = (
+  root: ParsedNode,
+  targets: ReadonlyMap<Alias, ParsedNode>,
+  source: string,
+  lineCounter: LineCounter,
+): StructureAudit => {
+  const issues: FlowDefinitionYamlIssue[] = [];
+  const aliasPaths = new Map<Alias, string>();
+  const stack: WalkEntry[] = [{ node: root, path: '' }];
+
+  const checkTag = (node: ParsedNode, path: string): void => {
+    if (!(isScalar(node) || isMap(node) || isSeq(node))) {
+      return;
+    }
+
+    const tag = node.tag;
+    if (tag === undefined || ALLOWED_TAGS.has(tag)) {
+      return;
+    }
+
+    issues.push({
+      path: issuePath(path),
+      message:
+        `YAML tag ${tagDisplay(tag)} is not allowed. Definitions use plain values; ` +
+        'only the core tags !!str, !!int, !!float, !!bool, !!null, !!map and !!seq are accepted, ' +
+        'because any other tag changes the value the author wrote.',
+      ...(lineCol(lineCounter, node.range) ?? {}),
+    });
+  };
+
+  const typeLabel = (value: unknown): string => {
+    if (value === null) return 'null';
+    if (typeof value === 'boolean') return 'a boolean';
+    if (typeof value === 'number') return 'a number';
+    return 'a non-text value';
+  };
+
+  /** Audits one pair; returns the child to walk, or undefined when there is none. */
+  const auditPair = (
+    pair: Pair,
+    mapPath: string,
+    mapNode: ParsedNode,
+    seen: Set<string>,
+  ): WalkEntry | undefined => {
+    const keyNode = pair.key as ParsedNode | null | undefined;
+
+    if (keyNode == null) {
+      issues.push({
+        path: issuePath(mapPath),
+        message: 'A mapping entry has no key; write the key as quoted text, for example "name".',
+        ...(lineCol(lineCounter, mapNode.range) ?? {}),
       });
+      return undefined;
+    }
+
+    if (isAlias(keyNode)) {
+      aliasPaths.set(keyNode, mapPath);
+    } else {
+      checkTag(keyNode, mapPath);
+    }
+
+    const keyTarget = isAlias(keyNode) ? targets.get(keyNode) : keyNode;
+    if (keyTarget === undefined) {
+      // An unresolved alias is a parse error, which has already been reported.
+      return undefined;
+    }
+
+    const keyWritten = keyNode.range ? source.slice(keyNode.range[0], keyNode.range[1]) : '';
+    if (!isScalar(keyTarget)) {
+      issues.push({
+        path: issuePath(mapPath),
+        message: 'Mapping keys must be plain text; a list or a mapping cannot be a key.',
+        ...(lineCol(lineCounter, keyNode.range) ?? {}),
+      });
+      return { node: pair.value, path: childPath(mapPath, '<complex key>') };
+    }
+
+    const value: unknown = keyTarget.value;
+    const isMergeKey =
+      isScalar(keyNode) && keyNode.type === 'PLAIN' && (value === '<<' || typeof value === 'symbol');
+    const label = typeof value === 'symbol' ? '<<' : String(value);
+    const keyPath = childPath(mapPath, label);
+    const position = lineCol(lineCounter, keyNode.range) ?? {};
+
+    if (seen.has(label)) {
+      issues.push({
+        path: keyPath,
+        message:
+          `Map keys must be unique: "${label}" is already a key in this mapping. ` +
+          'Keys are compared by their text, so 1 and "1", or yes and "true", are the same key.',
+        ...position,
+      });
+    } else {
+      seen.add(label);
+
+      if (isMergeKey) {
+        issues.push({
+          path: issuePath(mapPath),
+          message: 'Merge keys (`<<`) are not allowed; declare every field explicitly.',
+          ...position,
+        });
+      } else if (typeof value !== 'string') {
+        issues.push({
+          path: keyPath,
+          message:
+            `Mapping key ${keyWritten} is not text (YAML reads it as ${typeLabel(value)}). ` +
+            `Put the key in quotes, for example ${JSON.stringify(keyWritten)}, ` +
+            'so its name is kept exactly as written.',
+          ...position,
+        });
+      } else if (value === '__proto__') {
+        issues.push({
+          path: keyPath,
+          message:
+            'Key "__proto__" is not allowed: it would be dropped silently. Rename this key.',
+          ...position,
+        });
+      }
+    }
+
+    return { node: pair.value, path: keyPath };
+  };
+
+  while (stack.length > 0) {
+    const { node, path } = stack.pop() as WalkEntry;
+
+    if (isAlias(node)) {
+      aliasPaths.set(node, path);
+      continue;
+    }
+
+    if (!isNode(node)) {
+      continue;
+    }
+
+    const parsed = node as ParsedNode;
+    checkTag(parsed, path);
+
+    const children: WalkEntry[] = [];
+    if (isMap(parsed)) {
+      const seen = new Set<string>();
+      for (const pair of parsed.items) {
+        const child = auditPair(pair, path, parsed, seen);
+        if (child) {
+          children.push(child);
+        }
+      }
+    } else if (isSeq(parsed)) {
+      parsed.items.forEach((item, index) => {
+        children.push({ node: item, path: `${path}[${index}]` });
+      });
+    }
+
+    // Pushed in reverse so the walk pops children in document order.
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      stack.push(children[index]);
     }
   }
 
-  const node = locateNode(root, issue.path);
-  return [
-    {
-      path: formatPath(issue.path),
-      message: issue.message,
-      ...(lineCol(lineCounter, node?.range) ?? {}),
-    },
-  ];
+  return { issues, aliasPaths };
 };
+
+/**
+ * Rejects a `version` whose raw source is not a plain decimal integer. YAML 1.1
+ * reads `010` as 8, `0x0A` as 10, `1:00` as 60, `1_0` as 10, `1e1` as 10, `2.0`
+ * as 2 and rounds integers above 2^53, so the number the author pinned would not
+ * be the one written. The check reads the source text, so it sees the form the
+ * author wrote. Quoted and other non-number values are left to the schema,
+ * which already rejects them with a type error.
+ */
+const versionIssue = (
+  contents: ParsedNode,
+  targets: ReadonlyMap<Alias, ParsedNode>,
+  source: string,
+  lineCounter: LineCounter,
+): FlowDefinitionYamlIssue | undefined => {
+  if (!isMap(contents)) {
+    return undefined;
+  }
+
+  const pair = findPair(contents, 'version');
+  const written = pair?.value as ParsedNode | null | undefined;
+  if (!written) {
+    return undefined;
+  }
+
+  const resolved = isAlias(written) ? targets.get(written) : written;
+  if (!isScalar(resolved) || typeof resolved.value !== 'number' || !resolved.range) {
+    return undefined;
+  }
+
+  const raw = source.slice(resolved.range[0], resolved.range[1]);
+  if (/^(0|[1-9][0-9]*)$/.test(raw) && Number.isSafeInteger(Number(raw))) {
+    return undefined;
+  }
+
+  return {
+    path: 'version',
+    message:
+      'version must be a plain decimal integer (for example 1 or 12). YAML number forms such as ' +
+      '010, 0x0A, 1_0, 1e1, 1:00 and 2.0 are read as a different number, so they are not accepted.',
+    ...(lineCol(lineCounter, written.range) ?? {}),
+  };
+};
+
+/**
+ * Parser warnings are surfaced as typed issues. An unresolved tag is skipped
+ * here because {@link auditStructure} reports every explicit tag with a more
+ * precise message at the tagged node.
+ */
+const warningIssues = (
+  document: ParsedDocument,
+  lineCounter: LineCounter,
+): FlowDefinitionYamlIssue[] =>
+  document.warnings
+    .filter((warning) => !warning.message.startsWith('Unresolved tag'))
+    .map((warning) => {
+      const position = warning.linePos?.[0] ?? lineCounter.linePos(warning.pos[0]);
+      return {
+        path: '<document>',
+        message: warning.message.split('\n')[0].replace(/ at line \d+, column \d+:$/, ''),
+        line: position.line,
+        column: position.col,
+      };
+    });
+
+const sourceBytes = (source: string): number =>
+  // UTF-8 uses at most three bytes per UTF-16 code unit, so a source this short is under the cap.
+  source.length <= MAX_DEFINITION_BYTES / 3
+    ? source.length
+    : new TextEncoder().encode(source).byteLength;
+
+const oversizeError = (bytes: number, sourceName?: string): FlowDefinitionYamlError =>
+  new FlowDefinitionYamlError(
+    [
+      {
+        path: '<document>',
+        message:
+          `Definitions are limited to 2 MiB (${MAX_DEFINITION_BYTES} bytes); ` +
+          `this source is ${bytes} bytes. Split the definition or remove content that is not needed.`,
+        line: 1,
+        column: 1,
+      },
+    ],
+    sourceName,
+  );
 
 /**
  * Parses `source` into a `FlowDefinition`, throwing
@@ -275,10 +561,18 @@ const zodIssueToYamlIssues = (
  * reason the document cannot become a valid definition. The exact set of
  * structural rejections is:
  *
+ * - a source over {@link MAX_DEFINITION_BYTES} (2 MiB);
  * - malformed YAML (the parser's own errors, attributed to their position);
+ * - a document the parser cannot finish at all — a stack overflow from deeply
+ *   nested or misindented input — reported once at the document root;
  * - an empty stream or more than one document — a file holds exactly one
  *   definition because `id`/`version` live in the document, not the file name;
  * - a merge key (`<<`) — a definition must declare every field it sets;
+ * - a `__proto__` key, a key that collides with another key by its text, or a
+ *   key that is not text (for example `null`, `~`, `off`, `1`);
+ * - an explicit tag outside the core allowlist, or any other parser warning;
+ * - a `version` that is not a plain decimal integer in its source form;
+ * - an alias chain that expands beyond the alias limit;
  * - anything `flowSchema` rejects — unknown fields, wrong scalar types, and the
  *   refinements the JSON Schema cannot express.
  *
@@ -301,6 +595,38 @@ export function parseYamlWithStructure(
   source: string,
   sourceName?: string,
 ): ParsedFlowYaml {
+  try {
+    return parseYamlStructure(source, sourceName);
+  } catch (error) {
+    // The `yaml` parser recurses between `blockMap` and `step`, so a
+    // pathological document (a flood of misindented lines, very deep nesting)
+    // can exhaust the call stack before the parser produces a positioned
+    // error. A stack overflow carries no source position and is not a
+    // FlowDefinitionYamlError, so report it as a whole-document syntax failure
+    // rather than leaking a RangeError to callers. Only RangeError is
+    // converted; every other error, including our own, passes through.
+    if (!(error instanceof RangeError)) throw error;
+    throw new FlowDefinitionYamlError(
+      [
+        {
+          path: '<document>',
+          message:
+            'The document is too deeply or badly malformed to parse; fix the first syntax errors in the source.',
+          line: 1,
+          column: 1,
+        },
+      ],
+      sourceName,
+    );
+  }
+}
+
+const parseYamlStructure = (source: string, sourceName?: string): ParsedFlowYaml => {
+  const bytes = sourceBytes(source);
+  if (bytes > MAX_DEFINITION_BYTES) {
+    throw oversizeError(bytes, sourceName);
+  }
+
   const lineCounter = new LineCounter();
   const documents = parseAllDocuments(source, { ...PARSE_OPTIONS, lineCounter });
 
@@ -367,14 +693,61 @@ export function parseYamlWithStructure(
   }
 
   const contents = document.contents;
+  const targets = aliasTargets(document);
+  const audit = auditStructure(contents, targets, source, lineCounter);
 
-  const mergeIssues: FlowDefinitionYamlIssue[] = [];
-  collectMergeKeys(contents, mergeIssues, lineCounter, '');
-  if (mergeIssues.length > 0) {
-    throw new FlowDefinitionYamlError(mergeIssues, sourceName);
+  const structureIssues: FlowDefinitionYamlIssue[] = [
+    ...audit.issues,
+    ...warningIssues(document, lineCounter),
+  ];
+  const version = versionIssue(contents, targets, source, lineCounter);
+  if (version) {
+    structureIssues.push(version);
   }
 
-  const value: unknown = document.toJS();
+  if (structureIssues.length > 0) {
+    throw new FlowDefinitionYamlError(structureIssues, sourceName);
+  }
+
+  // Record the first alias whose expansion breaks the limit, so the failure
+  // can name its line. Hooks are installed on this document only.
+  let failedAlias: Alias | undefined;
+  for (const alias of audit.aliasPaths.keys()) {
+    const hooked = alias as unknown as {
+      toJSON: (arg: unknown, ctx: unknown) => unknown;
+    };
+    const original = hooked.toJSON.bind(alias);
+    hooked.toJSON = (arg: unknown, ctx: unknown): unknown => {
+      try {
+        return original(arg, ctx);
+      } catch (error) {
+        failedAlias ??= alias;
+        throw error;
+      }
+    };
+  }
+
+  let value: unknown;
+  try {
+    value = document.toJS({ maxAliasCount: MAX_ALIAS_COUNT });
+  } catch (error) {
+    const issue: FlowDefinitionYamlIssue = failedAlias
+      ? {
+          path: issuePath(audit.aliasPaths.get(failedAlias) ?? ''),
+          message:
+            `Alias *${failedAlias.source} expands too many times ` +
+            `(more than ${MAX_ALIAS_COUNT} uses of one anchor); write the shared value out where it is used.`,
+          ...(lineCol(lineCounter, failedAlias.range) ?? {}),
+        }
+      : {
+          path: '<document>',
+          message: error instanceof Error ? error.message : String(error),
+          line: 1,
+          column: 1,
+        };
+    throw new FlowDefinitionYamlError([issue], sourceName);
+  }
+
   const parsed = flowSchema.safeParse(value);
 
   if (!parsed.success) {
@@ -400,7 +773,43 @@ export function parseYamlWithStructure(
     definition: parsed.data,
     structure: { sourceName, contents, lineCounter },
   };
-}
+};
+
+/**
+ * Maps a single `flowSchema` issue (a Zod issue) to one or more YAML issues with
+ * line/column attached. Unknown-key issues are expanded to one issue per unknown
+ * key so each is attributed to its own line.
+ */
+const zodIssueToYamlIssues = (
+  issue: { code: string; path: Array<string | number>; message: string; keys?: string[] },
+  root: ParsedNode,
+  lineCounter: LineCounter,
+): FlowDefinitionYamlIssue[] => {
+  if (issue.code === 'unrecognized_keys') {
+    const parent = locateNode(root, issue.path);
+    const keys = issue.keys ?? [];
+
+    if (parent && isMap(parent) && keys.length > 0) {
+      return keys.map((key) => {
+        const pair = findPair(parent, key);
+        return {
+          path: formatPath([...issue.path, key]),
+          message: `Unrecognized key "${key}".`,
+          ...(lineCol(lineCounter, (pair?.key as Scalar | undefined)?.range ?? parent.range) ?? {}),
+        };
+      });
+    }
+  }
+
+  const node = locateNode(root, issue.path);
+  return [
+    {
+      path: formatPath(issue.path),
+      message: issue.message,
+      ...(lineCol(lineCounter, node?.range) ?? {}),
+    },
+  ];
+};
 
 /**
  * Reads a definition file from disk and parses it. I/O failures throw
@@ -409,15 +818,49 @@ export function parseYamlWithStructure(
  * sandbox — so a workflow never re-reads a definition during replay.
  */
 export async function loadFlowFile(path: string): Promise<FlowDefinition> {
-  let source: string;
-  try {
-    source = await readFile(path, 'utf8');
-  } catch (cause) {
-    throw new FlowDefinitionFileError(path, cause);
-  }
-
+  const source = await readDefinitionSource(path);
   return parseFlowYaml(source, { sourceName: path });
 }
+
+/**
+ * Opens the path and checks the open descriptor before reading. A FIFO, socket,
+ * device or directory is rejected instead of being read: a read on a FIFO with
+ * no writer blocks forever. `O_NONBLOCK` keeps `open` itself from waiting for a
+ * writer; the descriptor's own type check then rejects the file. Checking the
+ * descriptor, rather than the path, also means the file that was checked is the
+ * file that is read.
+ */
+const readDefinitionSource = async (path: string): Promise<string> => {
+  const handle: FileHandle = await open(
+    path,
+    constants.O_RDONLY | (constants.O_NONBLOCK ?? 0),
+  ).catch((cause: unknown) => {
+    throw new FlowDefinitionFileError(path, cause);
+  });
+
+  try {
+    const info = await handle.stat();
+    if (!info.isFile()) {
+      throw new FlowDefinitionFileError(
+        path,
+        new Error('not a regular file; a definition must be a regular file, not a directory, FIFO, socket or device'),
+      );
+    }
+
+    if (info.size > MAX_DEFINITION_BYTES) {
+      throw oversizeError(info.size, path);
+    }
+
+    return await handle.readFile({ encoding: 'utf8' });
+  } catch (cause) {
+    if (cause instanceof FlowDefinitionFileError || cause instanceof FlowDefinitionYamlError) {
+      throw cause;
+    }
+    throw new FlowDefinitionFileError(path, cause);
+  } finally {
+    await handle.close();
+  }
+};
 
 /**
  * Splits a dot-joined issue path (as emitted by `validateFlowkit`) back into
