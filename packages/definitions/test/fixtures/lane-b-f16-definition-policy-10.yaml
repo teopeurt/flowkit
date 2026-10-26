@@ -1,0 +1,14 @@
+id: probe-flow
+version: 1
+roles: [requester]
+initialStage: draft
+stages:
+  draft:
+    pendingRole: requester
+    actions:
+      submit:
+        to: submitted
+        kind: human
+        policy: "10"
+  submitted:
+    final: true

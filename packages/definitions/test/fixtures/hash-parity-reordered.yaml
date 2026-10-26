@@ -1,0 +1,43 @@
+# Same definition as hash-parity.yaml, expanded (no anchors/aliases), with a
+# different key order and a different stage declaration order. Object key order
+# is irrelevant to the canonicaliser; array order is semantic and preserved.
+initialStage: draft
+roles: [reviewer, author]
+stages:
+  draft:
+    actions:
+      submit:
+        policy: author_can_submit
+        notify:
+          channels: [inbox]
+          to: [author]
+          template: approved_notice
+        kind: human
+        to: review
+    pendingRole: author
+  review:
+    actions:
+      approve:
+        to: published
+        notify:
+          to: [author]
+          template: approved_notice
+          channels: [inbox]
+        policy: reviewer_can_decide
+        kind: human
+      reject:
+        notify:
+          to: [author]
+          template: approved_notice
+          channels: [inbox]
+        policy: reviewer_can_decide
+        kind: human
+        to: draft
+    entry:
+      - { ref: resolveRoute, kind: rule }
+      - { gate: human, ref: summarize, kind: ai }
+    pendingRole: reviewer
+  published:
+    final: true
+id: hash-parity-flow
+version: 1

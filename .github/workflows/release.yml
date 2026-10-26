@@ -114,9 +114,10 @@ jobs:
           cleanup() { rm -rf "$candidate_root"; }
           trap cleanup EXIT
 
-          packages=(auth consumer core notify tasks temporal)
-          candidate_tarballs=()
-          expected_version="$(node -e 'const fs = require("node:fs"); const names = ["auth", "consumer", "core", "notify", "tasks", "temporal"]; const manifests = names.map((name) => JSON.parse(fs.readFileSync(`packages/${name}/package.json`, "utf8"))); const versions = new Set(manifests.map(({ version }) => version)); if (versions.size !== 1) throw new Error("candidate package versions are not lockstep"); process.stdout.write(manifests[0].version);')"
+          packages=(auth consumer core notify tasks temporal definitions)
+          demo_packages=(auth consumer core notify tasks temporal)
+          declare -A candidate_tarball_by_package=()
+          expected_version="$(node -e 'const fs = require("node:fs"); const names = ["auth", "consumer", "core", "definitions", "notify", "tasks", "temporal"]; const manifests = names.map((name) => JSON.parse(fs.readFileSync(`packages/${name}/package.json`, "utf8"))); const versions = new Set(manifests.map(({ version }) => version)); if (versions.size !== 1) throw new Error("candidate package versions are not lockstep"); process.stdout.write(manifests[0].version);')"
           for package in "${packages[@]}"; do
             mkdir -p "$candidate_root/$package"
             (cd "packages/$package" && bun pm pack --destination "$candidate_root/$package")
@@ -130,11 +131,17 @@ jobs:
               echo "candidate $package is $candidate_version, expected $expected_version" >&2
               exit 1
             fi
-            candidate_tarballs+=("$(realpath "$tarball")")
+            candidate_tarball_by_package["$package"]="$(realpath "$tarball")"
+          done
+          # All seven lockstep candidates are packed and version-checked above. The demo pins only
+          # the six pre-definitions packages, so only those are rewritten into the disposable copy.
+          demo_candidate_tarballs=()
+          for package in "${demo_packages[@]}"; do
+            demo_candidate_tarballs+=("${candidate_tarball_by_package[$package]}")
           done
           bash scripts/test-demo-candidate.sh \
             "$GITHUB_WORKSPACE/flowkit-demo" \
-            "${candidate_tarballs[@]}"
+            "${demo_candidate_tarballs[@]}"
 
       - name: Publish validated candidates
         if: steps.publish_plan.outputs.has_releases == 'true'

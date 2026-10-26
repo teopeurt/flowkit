@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import * as flowkit from './index';
+import { defineFlow } from './schema';
 import { docReviewFlow } from './testing/doc-review.fixture';
 import {
   AuthorizationRejectionError,
@@ -168,6 +169,54 @@ describe('transition kernel', () => {
       ),
       MissingGuardError,
     );
+  });
+
+  test('registry lookups ignore Object.prototype members (a missing ref must not resolve to an inherited function)', () => {
+    // `{}.constructor` and `{}.toString` are functions that return truthy values, so an
+    // unguarded `registry[name]` lookup would silently AUTHORIZE a transition whose policy
+    // was never registered. A missing ref must always fail fast, whatever its name.
+    for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
+      const policyFlow = defineFlow({
+        id: `proto-policy-${name}`,
+        version: 1,
+        roles: ['author'],
+        initialStage: 'draft',
+        stages: {
+          draft: { pendingRole: 'author', actions: { go: { to: 'done', kind: 'human', policy: name } } },
+          done: { final: true },
+        },
+      });
+
+      expectError(
+        () => transition(policyFlow, buildInitialState(policyFlow), { action: 'go' }, { policies: {} }),
+        MissingPolicyError,
+      );
+
+      const guardFlow = defineFlow({
+        id: `proto-guard-${name}`,
+        version: 1,
+        roles: ['author'],
+        initialStage: 'draft',
+        stages: {
+          draft: {
+            pendingRole: 'author',
+            actions: { go: { to: 'done', kind: 'human', policy: 'allow', guards: [name] } },
+          },
+          done: { final: true },
+        },
+      });
+
+      expectError(
+        () =>
+          transition(
+            guardFlow,
+            buildInitialState(guardFlow),
+            { action: 'go' },
+            { policies: { allow: () => true }, guards: {} },
+          ),
+        MissingGuardError,
+      );
+    }
   });
 
   test('rejected policy throws AuthorizationRejectionError', () => {

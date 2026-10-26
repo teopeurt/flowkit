@@ -1,0 +1,34 @@
+{
+  "id": "rule-heavy-flow",
+  "version": 1,
+  "roles": ["operator"],
+  "tracks": {
+    "review": { "initial": "open", "values": ["open", "escalated", "closed"] }
+  },
+  "initialStage": "pending",
+  "stages": {
+    "pending": {
+      "entry": [
+        { "kind": "system", "ref": "collectOutcomeSignals" },
+        { "kind": "rule", "ref": "routeOutcome" }
+      ],
+      "actions": {
+        "complete": { "to": "completed", "kind": "system", "tracks": { "review": "closed" } },
+        "requestReview": { "to": "under_review", "kind": "system", "tracks": { "review": "escalated" } }
+      }
+    },
+    "under_review": {
+      "pendingRole": "operator",
+      "actions": {
+        "close": {
+          "to": "completed",
+          "kind": "signal",
+          "policy": "operator_can_close",
+          "tracks": { "review": "closed" },
+          "notify": { "template": "review.closed", "channels": ["inbox"] }
+        }
+      }
+    },
+    "completed": { "final": true }
+  }
+}

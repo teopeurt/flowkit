@@ -9,7 +9,7 @@
     "pack:check": "bun run scripts/pack-check.ts",
     "version:check": "bun run scripts/check-lockstep-versions.ts && bun test scripts/check-lockstep-versions.test.ts",
     "changeset": "changeset",
-    "release:version": "changeset version",
+    "release:version": "changeset version && bun run scripts/sync-release-versions.ts && bun install --frozen-lockfile && bun run build",
     "release:plan": "changeset publish-plan --output .changeset/release-plan.json",
     "release:validate": "bun run scripts/validate-release-plan.ts",
     "release:publish": "changeset publish"

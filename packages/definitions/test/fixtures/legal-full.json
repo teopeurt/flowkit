@@ -1,0 +1,76 @@
+{
+  "id": "full-flow",
+  "version": 3,
+  "roles": ["requester", "reviewer", "supervisor"],
+  "tracks": {
+    "payment": {
+      "initial": "not_required",
+      "values": ["not_required", "required", "submitted", "confirmed", "rejected"]
+    },
+    "production": {
+      "initial": "not_ready",
+      "values": ["not_ready", "ready", "in_production", "produced"]
+    }
+  },
+  "initialStage": "intake",
+  "initialStatus": "pending",
+  "actions": {
+    "escalate": {
+      "to": "review",
+      "kind": "system",
+      "status": "escalated",
+      "pendingRole": "supervisor",
+      "policy": "supervisor_can_escalate",
+      "guards": ["slaExpired"]
+    },
+    "recall": {
+      "to": "intake",
+      "kind": "human",
+      "policy": "requester_can_recall"
+    }
+  },
+  "stages": {
+    "intake": {
+      "pendingRole": "requester",
+      "steady": false,
+      "entry": [{ "kind": "system", "ref": "verifyDocumentChecklist" }],
+      "entryNotify": { "template": "intake.opened", "channels": ["inbox"], "to": ["requester"] },
+      "disabledGlobalActions": ["recall"],
+      "sla": { "after": "72h", "escalate": { "notify": "supervisor", "action": "escalate" } },
+      "actions": {
+        "submit": {
+          "to": "review",
+          "kind": "human",
+          "status": "submitted",
+          "pendingRole": "reviewer",
+          "tracks": { "payment": "required" },
+          "guards": ["commentRequired"],
+          "policy": "requester_can_submit",
+          "notify": [
+            { "template": "review.requested", "channels": ["inbox", "email"], "to": ["reviewer"] },
+            { "template": "review.requested.sms", "channels": ["sms"], "to": ["reviewer"] }
+          ]
+        }
+      }
+    },
+    "review": {
+      "pendingRole": "reviewer",
+      "steady": true,
+      "entry": [
+        { "kind": "rule", "ref": "resolvePaymentRequirement" },
+        { "kind": "ai", "ref": "summarizeCaseForReviewer", "gate": "human" }
+      ],
+      "actions": {
+        "approve": {
+          "to": "approved",
+          "kind": "human",
+          "policy": "reviewer_can_decide",
+          "notify": { "template": "request.approved", "channels": ["inbox"] }
+        },
+        "reject": { "to": "rejected", "kind": "human", "policy": "reviewer_can_decide" }
+      }
+    },
+    "approved": { "final": true },
+    "rejected": { "final": true }
+  }
+}

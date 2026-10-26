@@ -1,0 +1,39 @@
+# YAML mirror of refinement-sla-disabled-action.json.
+#
+# Shape-valid (the emitted JSON Schema accepts it) but refused by `flowSchema`: the
+# stage disables the very action its SLA escalation fires, and the escalation names an
+# undeclared notify role. Kept as a fixture because it is the clearest example of a rule
+# a JSON Schema cannot express — the loader must reject it exactly as `defineFlow` does.
+id: refinement-sla-disabled-action-flow
+version: 1
+roles: [requester, reviewer, supervisor]
+initialStage: intake
+actions:
+  escalate:
+    to: review
+    kind: system
+    pendingRole: supervisor
+    policy: supervisor_can_escalate
+stages:
+  intake:
+    pendingRole: requester
+    disabledGlobalActions: [escalate]
+    sla:
+      after: 72h
+      escalate:
+        notify: intake.sla
+        action: escalate
+    actions:
+      submit:
+        to: review
+        kind: human
+        policy: requester_can_submit
+  review:
+    pendingRole: reviewer
+    actions:
+      approve:
+        to: approved
+        kind: human
+        policy: reviewer_can_decide
+  approved:
+    final: true

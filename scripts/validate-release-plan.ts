@@ -4,13 +4,22 @@ export const flowKitPackages = [
   "@naakwu/flowkit-auth",
   "@naakwu/flowkit-consumer",
   "@naakwu/flowkit-core",
+  "@naakwu/flowkit-definitions",
   "@naakwu/flowkit-notify",
   "@naakwu/flowkit-tasks",
   "@naakwu/flowkit-temporal",
 ] as const;
 
-const initialReleaseVersion = "0.2.0";
-const flowKitPackageDirectories = ["auth", "consumer", "core", "notify", "tasks", "temporal"];
+const initialReleaseVersion = "1.0.0";
+const flowKitPackageDirectories = [
+  "auth",
+  "consumer",
+  "core",
+  "definitions",
+  "notify",
+  "tasks",
+  "temporal",
+];
 
 type PublishRelease = { kind?: unknown; name?: unknown; version?: unknown };
 type PublishPlan = { version?: unknown; plan?: unknown };
@@ -25,7 +34,7 @@ export function validateReleasePlan(
 
   const releases = publishPlan.plan.flat() as PublishRelease[];
   if (releases.some((release) => release.kind !== "publish" || typeof release.name !== "string")) {
-    throw new Error("Release plan must include exactly the six FlowKit packages");
+    throw new Error("Release plan must include exactly the seven FlowKit packages");
   }
 
   const expectedNames = new Set<string>(flowKitPackages);
@@ -36,7 +45,7 @@ export function validateReleasePlan(
     [...actualNames].some((name) => !expectedNames.has(name)) ||
     flowKitPackages.some((name) => !actualNames.has(name))
   ) {
-    throw new Error("Release plan must include exactly the six FlowKit packages");
+    throw new Error("Release plan must include exactly the seven FlowKit packages");
   }
 
   if (releases.some((release) => release.version !== expectedVersion)) {

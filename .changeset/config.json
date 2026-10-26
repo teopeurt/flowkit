@@ -7,6 +7,7 @@
       "@naakwu/flowkit-auth",
       "@naakwu/flowkit-consumer",
       "@naakwu/flowkit-core",
+      "@naakwu/flowkit-definitions",
       "@naakwu/flowkit-notify",
       "@naakwu/flowkit-tasks",
       "@naakwu/flowkit-temporal"

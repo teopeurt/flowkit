@@ -1,3 +1,5 @@
+export const FLOWKIT_CONSUMER_VERSION = '1.0.0';
+
 export { createFlowkitConsumer } from './consumer.js';
 export type {
   ConsumerDependencies,

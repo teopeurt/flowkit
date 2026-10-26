@@ -1,0 +1,15 @@
+id: multi-doc-flow
+version: 1
+roles: [requester]
+initialStage: draft
+stages:
+  draft:
+    final: true
+---
+id: second-flow
+version: 1
+roles: [requester]
+initialStage: draft
+stages:
+  draft:
+    final: true

@@ -1,0 +1,3 @@
+# Malformed registries manifest: `policies` must be a mapping of names, not a list.
+policies:
+  - reviewer_can_approve

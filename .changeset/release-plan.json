@@ -50,6 +50,15 @@
         "access": "restricted",
         "tag": "latest"
       }
+    ],
+    [
+      {
+        "kind": "publish",
+        "name": "@naakwu/flowkit-definitions",
+        "version": "1.0.0",
+        "access": "restricted",
+        "tag": "latest"
+      }
     ]
   ]
 }

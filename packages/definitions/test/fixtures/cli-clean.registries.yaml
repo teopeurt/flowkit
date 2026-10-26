@@ -1,0 +1,10 @@
+# Complete registries manifest for cli-clean.yaml: every declared policy, system
+# step, template, and channel is present, so `validateFlowkit` reports 0 issues.
+policies:
+  reviewer_can_approve: {}
+systemSteps:
+  prepare: {}
+templates:
+  approved_notice: {}
+channels:
+  inbox: {}

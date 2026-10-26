@@ -1,0 +1,19 @@
+id: four-issues-flow
+version: 1
+roles: [reviewer]
+initialStage: pending
+stages:
+  pending:
+    pendingRole: reviewer
+    entry:
+      - { kind: system, ref: danglingSystemStep }
+    actions:
+      approve:
+        to: approved
+        kind: human
+  approved:
+    final: true
+    entry:
+      - { kind: system, ref: cleanup }
+  orphaned:
+    final: true

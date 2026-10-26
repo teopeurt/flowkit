@@ -12,6 +12,8 @@ import {
   factFlowkitWorkflow,
   loopFlowkitInput,
   loopFlowkitWorkflow,
+  protoRuleFlowkitInput,
+  protoRuleFlowkitWorkflow,
   notifySlaInput,
   notifySlaWorkflow,
   actionSlaInput,
@@ -210,6 +212,22 @@ describe('createFlowkitWorkflow', () => {
       const handle = await environment.client.workflow.start(factFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'entry-facts', args: [factFlowkitInput()] });
       expect(await waitForStage(handle, 'approved')).toBe('approved');
       expect(testActivities.systemStepInputs).toEqual([{ workflowId: 'entry-facts', entryEpoch: 0, stepIndex: 0, idempotencyKey: '["entry-facts",0,0]' }]);
+      await handle.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 30_000);
+
+  testWithTimeout('treats a rule ref named like an Object.prototype member as unregistered instead of failing the workflow task', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    try {
+      testActivities.reset();
+      const handle = await environment.client.workflow.start(protoRuleFlowkitWorkflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId: 'proto-rule', args: [protoRuleFlowkitInput()] });
+      // `rules.constructor` would resolve to Object.prototype.constructor; calling `.run` on it
+      // throws inside the workflow and wedges the task, so the query below would never answer.
+      const view = await handle.query('getState') as { state: { stage: string }; completed: boolean };
+      expect(view.state.stage).toBe('checking');
+      expect(view.completed).toBe(false);
       await handle.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
   }, 30_000);

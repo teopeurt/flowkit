@@ -1,0 +1,16 @@
+{
+  "id": "ai-without-gate-flow",
+  "version": 1,
+  "roles": ["reviewer"],
+  "initialStage": "review",
+  "stages": {
+    "review": {
+      "pendingRole": "reviewer",
+      "entry": [{ "kind": "ai", "ref": "summarizeCaseForReviewer" }],
+      "actions": {
+        "approve": { "to": "approved", "kind": "human", "policy": "reviewer_can_decide" }
+      }
+    },
+    "approved": { "final": true }
+  }
+}

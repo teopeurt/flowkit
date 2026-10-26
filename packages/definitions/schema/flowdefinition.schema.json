@@ -1,0 +1,405 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FlowDefinition",
+  "description": "A Flowkit workflow definition as authored in YAML or JSON. Generated from @naakwu/flowkit-core flowSchema; do not edit by hand.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tracks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "initial": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "initial",
+          "values"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "initialStage": {
+      "type": "string"
+    },
+    "initialStatus": {
+      "type": "string"
+    },
+    "actions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "human",
+              "system",
+              "signal"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "pendingRole": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tracks": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "guards": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "policy": {
+            "type": "string"
+          },
+          "notify": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "template": {
+                    "type": "string"
+                  },
+                  "channels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "to": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "template",
+                  "channels"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "template": {
+                      "type": "string"
+                    },
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "to": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "template",
+                    "channels"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              }
+            ]
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "pendingRole": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "final": {
+            "type": "boolean"
+          },
+          "steady": {
+            "type": "boolean"
+          },
+          "entry": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "system",
+                    "ai",
+                    "rule"
+                  ]
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "gate": {
+                  "type": "string",
+                  "const": "human"
+                }
+              },
+              "required": [
+                "kind",
+                "ref"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "entryNotify": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "template": {
+                    "type": "string"
+                  },
+                  "channels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "to": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "template",
+                  "channels"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "template": {
+                      "type": "string"
+                    },
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "to": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "template",
+                    "channels"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              }
+            ]
+          },
+          "disabledGlobalActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sla": {
+            "type": "object",
+            "properties": {
+              "after": {
+                "type": "string"
+              },
+              "escalate": {
+                "type": "object",
+                "properties": {
+                  "notify": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "after",
+              "escalate"
+            ],
+            "additionalProperties": false
+          },
+          "actions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "to": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "human",
+                    "system",
+                    "signal"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "pendingRole": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "tracks": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "guards": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "policy": {
+                  "type": "string"
+                },
+                "notify": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "template": {
+                          "type": "string"
+                        },
+                        "channels": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "to": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "template",
+                        "channels"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "template": {
+                            "type": "string"
+                          },
+                          "channels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "to": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "template",
+                          "channels"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "to"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "roles",
+    "initialStage",
+    "stages"
+  ],
+  "additionalProperties": false
+}

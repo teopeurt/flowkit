@@ -180,7 +180,10 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
           continue;
         }
 
-        const action = config.registries.rules?.[step.ref]?.run({ definition, state: execution.state, subject: input.subject.metadata ?? {}, facts: entryFacts, priorTransition });
+        // Own-property lookup only: `rules['constructor']` would otherwise resolve to an
+        // inherited Object.prototype function, and calling `.run` on it fails the workflow task.
+        const rule = Object.hasOwn(config.registries.rules ?? {}, step.ref) ? config.registries.rules?.[step.ref] : undefined;
+        const action = rule?.run({ definition, state: execution.state, subject: input.subject.metadata ?? {}, facts: entryFacts, priorTransition });
         if (action) {
           if (automaticTransitions >= (config.maxAutomaticTransitionsPerTurn ?? 32)) {
             throw ApplicationFailure.nonRetryable('Automatic transition limit exceeded.', 'FLOWKIT_AUTOMATIC_LOOP');

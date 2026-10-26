@@ -1,0 +1,3 @@
+# Manifest declares 010 unquoted: must be rejected (YAML 1.1 reads it as a number).
+policies:
+  010: {}
