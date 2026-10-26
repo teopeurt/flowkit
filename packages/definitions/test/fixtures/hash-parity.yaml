@@ -1,0 +1,38 @@
+# Hash-parity fixture: anchors/aliases, shuffled key order, shuffled stage order.
+# The canonicaliser sorts object keys and the parser expands aliases, so the hash
+# must equal the expanded-literal twin (hash-parity-reordered.yaml) and the
+# TypeScript twin asserted in the loader spec.
+id: hash-parity-flow
+version: 1
+roles: [reviewer, author]
+initialStage: draft
+stages:
+  published:
+    final: true
+  review:
+    pendingRole: reviewer
+    entry:
+      - { kind: rule, ref: resolveRoute }
+      - { kind: ai, ref: summarize, gate: human }
+    actions:
+      approve:
+        to: published
+        kind: human
+        policy: reviewer_can_decide
+        notify: &approval
+          template: approved_notice
+          channels: [inbox]
+          to: [author]
+      reject:
+        to: draft
+        kind: human
+        policy: reviewer_can_decide
+        notify: *approval
+  draft:
+    pendingRole: author
+    actions:
+      submit:
+        to: review
+        kind: human
+        policy: author_can_submit
+        notify: *approval

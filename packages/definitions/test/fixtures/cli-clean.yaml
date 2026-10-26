@@ -1,0 +1,17 @@
+id: clean-flow
+version: 1
+roles: [reviewer]
+initialStage: pending
+stages:
+  pending:
+    pendingRole: reviewer
+    entry:
+      - { kind: system, ref: prepare }
+    actions:
+      approve:
+        to: approved
+        kind: human
+        policy: reviewer_can_approve
+        notify: { template: approved_notice, channels: [inbox], to: [reviewer] }
+  approved:
+    final: true

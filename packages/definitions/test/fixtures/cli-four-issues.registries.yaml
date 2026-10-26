@@ -1,0 +1,5 @@
+# Registries manifest for cli-four-issues.yaml. Declares `cleanup` so the final
+# stage's entry step resolves; `danglingSystemStep` is intentionally absent so it
+# is reported as a missing system-step ref.
+systemSteps:
+  cleanup: {}

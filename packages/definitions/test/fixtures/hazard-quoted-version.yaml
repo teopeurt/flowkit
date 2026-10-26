@@ -1,0 +1,7 @@
+id: quoted-version-flow
+version: "2"
+roles: [requester]
+initialStage: draft
+stages:
+  draft:
+    final: true

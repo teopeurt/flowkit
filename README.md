@@ -7,6 +7,7 @@ This repository is Apache-2.0 licensed source. During Phase 2, packages install 
 
 ```text
 @naakwu/flowkit-core       definition and transition kernel
+├── @naakwu/flowkit-definitions   definition authoring format (YAML) and JSON Schema
 ├── @naakwu/flowkit-tasks     task projections and claims
 │   └── @naakwu/flowkit-consumer  consumer integration contracts (also uses core)
 └── @naakwu/flowkit-temporal  Temporal runtime (uses core and consumer)
@@ -49,7 +50,7 @@ For a local sibling override, replace the affected dependency in the consuming w
 
 ## Releases
 
-All six packages are pinned to the initial lockstep release version, `1.0.0`. The first private publication uses Changesets' publish plan to publish those existing manifest versions, rather than creating a synthetic version bump. A release builds and checks packed artifacts before publishing to GitHub Packages. Phase 2 remains private-package distribution; public npm publication is explicitly deferred to Phase 4.
+All seven packages are pinned to the initial lockstep release version, `1.0.0`. The first private publication uses Changesets' publish plan to publish those existing manifest versions, rather than creating a synthetic version bump. A release builds and checks packed artifacts before publishing to GitHub Packages. Phase 2 remains private-package distribution; public npm publication is explicitly deferred to Phase 4.
 
 ## Contributing and security
 

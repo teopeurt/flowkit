@@ -10,7 +10,7 @@
     },
     "packages/auth": {
       "name": "@naakwu/flowkit-auth",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
@@ -32,7 +32,7 @@
     },
     "packages/consumer": {
       "name": "@naakwu/flowkit-consumer",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
         "@naakwu/flowkit-core": "workspace:^",
         "@naakwu/flowkit-tasks": "workspace:^",
@@ -45,7 +45,7 @@
     },
     "packages/core": {
       "name": "@naakwu/flowkit-core",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
@@ -54,9 +54,31 @@
         "typescript": "^5",
       },
     },
+    "packages/definitions": {
+      "name": "@naakwu/flowkit-definitions",
+      "version": "0.2.0",
+      "bin": {
+        "flowkit": "./dist/bin.js",
+      },
+      "dependencies": {
+        "@naakwu/flowkit-core": "workspace:^",
+        "@naakwu/flowkit-temporal": "workspace:^",
+        "yaml": "^2.9.0",
+      },
+      "devDependencies": {
+        "@temporalio/testing": "1.16.2",
+        "@temporalio/worker": "1.16.2",
+        "@temporalio/workflow": "1.16.2",
+        "@types/bun": "latest",
+        "ajv": "^8.17.1",
+        "tsup": "^8.5.0",
+        "typescript": "^5",
+        "zod-to-json-schema": "^3.25.0",
+      },
+    },
     "packages/notify": {
       "name": "@naakwu/flowkit-notify",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
         "@noble/hashes": "^2.0.1",
         "zod": "^3.25.42",
@@ -68,7 +90,7 @@
     },
     "packages/tasks": {
       "name": "@naakwu/flowkit-tasks",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
         "@naakwu/flowkit-core": "workspace:^",
         "@noble/hashes": "^2.0.1",
@@ -81,7 +103,7 @@
     },
     "packages/temporal": {
       "name": "@naakwu/flowkit-temporal",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
         "@naakwu/flowkit-consumer": "workspace:^",
         "@naakwu/flowkit-core": "workspace:^",
@@ -256,6 +278,8 @@
     "@naakwu/flowkit-consumer": ["@naakwu/flowkit-consumer@workspace:packages/consumer"],
 
     "@naakwu/flowkit-core": ["@naakwu/flowkit-core@workspace:packages/core"],
+
+    "@naakwu/flowkit-definitions": ["@naakwu/flowkit-definitions@workspace:packages/definitions"],
 
     "@naakwu/flowkit-notify": ["@naakwu/flowkit-notify@workspace:packages/notify"],
 
@@ -785,6 +809,8 @@
 
     "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
+    "zod-to-json-schema": ["zod-to-json-schema@3.25.2", "", { "peerDependencies": { "zod": "^3.25.28 || ^4" } }, "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="],
+
     "@better-auth/core/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
     "@jsonjoy.com/fs-snapshot/@jsonjoy.com/json-pack": ["@jsonjoy.com/json-pack@17.67.0", "", { "dependencies": { "@jsonjoy.com/base64": "17.67.0", "@jsonjoy.com/buffers": "17.67.0", "@jsonjoy.com/codegen": "17.67.0", "@jsonjoy.com/json-pointer": "17.67.0", "@jsonjoy.com/util": "17.67.0", "hyperdyperid": "^1.2.0", "thingies": "^2.5.0", "tree-dump": "^1.1.0" }, "peerDependencies": { "tslib": "2" } }, "sha512-t0ejURcGaZsn1ClbJ/3kFqSOjlryd92eQY465IYrezsXmPcfHPE/av4twRSxf6WE+TkZgLY+71vCZbiIiFKA/w=="],
@@ -795,7 +821,9 @@
 
     "@jsonjoy.com/util/@jsonjoy.com/buffers": ["@jsonjoy.com/buffers@1.2.1", "", { "peerDependencies": { "tslib": "2" } }, "sha512-12cdlDwX4RUM3QxmUbVJWqZ/mrK6dFQH4Zxq6+r1YXKXYBNgZXndx2qbCJwh3+WWkCSn67IjnlG3XYTvmvYtgA=="],
 
-    "@naakwu/flowkit-consumer/@types/bun": ["@types/bun@1.4.0", "", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
+    "@naakwu/flowkit-consumer/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
+
+    "@naakwu/flowkit-definitions/@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
     "better-auth/zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
 
@@ -821,6 +849,8 @@
 
     "@jsonjoy.com/fs-snapshot/@jsonjoy.com/util/@jsonjoy.com/codegen": ["@jsonjoy.com/codegen@17.67.0", "", { "peerDependencies": { "tslib": "2" } }, "sha512-idnkUplROpdBOV0HMcwhsCUS5TRUi9poagdGs70A6S4ux9+/aPuKbh8+UYRTLYQHtXvAdNfQWXDqZEx5k4Dj2Q=="],
 
-    "@naakwu/flowkit-consumer/@types/bun/bun-types": ["bun-types@1.4.0", "", { "dependencies": { "@types/node": "*" } }, "sha512-iIKw23BspnQQYd3prITOBxeUsxBHnwzX6YJfGMuNOZzeNcMmVqzIIVGRm1l69ogaPQmb4wB6BN8mA5bE9YuC5Q=="],
+    "@naakwu/flowkit-consumer/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
+
+    "@naakwu/flowkit-definitions/@types/bun/bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
   }
 }

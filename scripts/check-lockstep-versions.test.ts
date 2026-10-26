@@ -5,6 +5,7 @@ import { checkLockstepVersions } from './check-lockstep-versions';
 import { FLOWKIT_AUTH_VERSION } from '../packages/auth/src';
 import { testingContractVersion } from '../packages/auth/src/testing/contract-suites';
 import { FLOWKIT_CORE_VERSION } from '../packages/core/src';
+import { FLOWKIT_DEFINITIONS_VERSION } from '../packages/definitions/src';
 import { FLOWKIT_NOTIFY_VERSION } from '../packages/notify/src';
 import { FLOWKIT_TASKS_VERSION } from '../packages/tasks/src';
 import { FLOWKIT_TEMPORAL_VERSION } from '../packages/temporal/src';
@@ -19,6 +20,11 @@ const publicVersionContracts = [
     name: '@naakwu/flowkit-core',
     manifestPath: '../packages/core/package.json',
     exports: [FLOWKIT_CORE_VERSION],
+  },
+  {
+    name: '@naakwu/flowkit-definitions',
+    manifestPath: '../packages/definitions/package.json',
+    exports: [FLOWKIT_DEFINITIONS_VERSION],
   },
   {
     name: '@naakwu/flowkit-notify',

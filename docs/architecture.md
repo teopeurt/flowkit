@@ -3,16 +3,18 @@
 FlowKit separates a pure flow kernel from optional execution and integration layers.
 
 ```text
-@naakwu/flowkit-core ──────→ @naakwu/flowkit-tasks ───→ @naakwu/flowkit-consumer ───→ @naakwu/flowkit-temporal
-          └───────────────────────────────────────────→ @naakwu/flowkit-consumer
+@naakwu/flowkit-core ──────→ @naakwu/flowkit-definitions
+          ├────────────────→ @naakwu/flowkit-tasks ───→ @naakwu/flowkit-consumer ───→ @naakwu/flowkit-temporal
+          ├───────────────────────────────────────────→ @naakwu/flowkit-consumer
           └────────────────────────────────────────────────────────────────────────→ @naakwu/flowkit-temporal
+@naakwu/flowkit-temporal ─→ @naakwu/flowkit-definitions
 @naakwu/flowkit-notify     (no declared FlowKit package dependency)
 @naakwu/flowkit-auth       (no declared FlowKit package dependency)
 ```
 
-In dependency-edge form, the graph is `@naakwu/flowkit-core → @naakwu/flowkit-tasks`, `@naakwu/flowkit-core → @naakwu/flowkit-consumer`, `@naakwu/flowkit-tasks → @naakwu/flowkit-consumer`, `@naakwu/flowkit-core → @naakwu/flowkit-temporal`, and `@naakwu/flowkit-consumer → @naakwu/flowkit-temporal`.
+In dependency-edge form, the graph is `@naakwu/flowkit-core → @naakwu/flowkit-definitions`, `@naakwu/flowkit-core → @naakwu/flowkit-tasks`, `@naakwu/flowkit-core → @naakwu/flowkit-consumer`, `@naakwu/flowkit-tasks → @naakwu/flowkit-consumer`, `@naakwu/flowkit-core → @naakwu/flowkit-temporal`, `@naakwu/flowkit-consumer → @naakwu/flowkit-temporal`, and `@naakwu/flowkit-temporal → @naakwu/flowkit-definitions`.
 
-`@naakwu/flowkit-core` owns serializable flow definitions, validation, and pure state transitions. `@naakwu/flowkit-tasks` projects committed transitions into task lifecycle concerns. `@naakwu/flowkit-consumer` supplies consumer-facing integration contracts, and `@naakwu/flowkit-temporal` executes a published, immutable definition snapshot in Temporal. `@naakwu/flowkit-notify` plans and delivers notification work through consumer adapters. `@naakwu/flowkit-auth` provides portable authentication and authorization contracts with explicit subpath integrations.
+`@naakwu/flowkit-core` owns serializable flow definitions, validation, and pure state transitions. `@naakwu/flowkit-definitions` owns the authoring format for those definitions — the YAML binding and the emitted JSON Schema — so authoring concerns never leak into the kernel. `@naakwu/flowkit-tasks` projects committed transitions into task lifecycle concerns. `@naakwu/flowkit-consumer` supplies consumer-facing integration contracts, and `@naakwu/flowkit-temporal` executes a published, immutable definition snapshot in Temporal. `@naakwu/flowkit-notify` plans and delivers notification work through consumer adapters. `@naakwu/flowkit-auth` provides portable authentication and authorization contracts with explicit subpath integrations.
 
 Package boundaries are compiled artifacts. Consumers use the published entry points listed in [package contracts](package-contracts.md), rather than relative paths into source. This preserves the same boundary for local workspace validation and installed packages.
 
