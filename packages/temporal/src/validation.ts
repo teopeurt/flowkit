@@ -56,6 +56,19 @@ export function parseSlaDuration(input: string): number | undefined {
 
 const pathFor = (...parts: Array<string | number>) => parts.join('.');
 
+/**
+ * Registry lookups must count only the registry's OWN entries. A plain `registry[name]` also
+ * resolves inherited `Object.prototype` members (`constructor`, `toString`, `valueOf`,
+ * `__proto__`, ...): an unregistered ref with one of those names would look registered and
+ * pass boot validation, and a rule ref would crash it with an unrelated TypeError. Refs are
+ * data written in a definition, so a missing one must be reported whatever its name.
+ */
+const hasOwnRef = (registry: Readonly<Record<string, unknown>> | undefined, name: string): boolean =>
+  registry !== undefined && Object.hasOwn(registry, name) && Boolean(registry[name]);
+
+const ownRef = <T>(registry: Readonly<Record<string, T>> | undefined, name: string): T | undefined =>
+  registry !== undefined && Object.hasOwn(registry, name) ? registry[name] : undefined;
+
 const pushIssue = (
   issues: FlowkitValidationIssue[],
   code: string,
@@ -74,11 +87,11 @@ const validateEntryRefs = (
     for (const [index, step] of (stage.entry ?? []).entries()) {
       const path = pathFor('stages', stageName, 'entry', index, 'ref');
 
-      if (step.kind === 'system' && !registries.systemSteps?.[step.ref]) {
+      if (step.kind === 'system' && !hasOwnRef(registries.systemSteps, step.ref)) {
         pushIssue(issues, 'missing-system-step-ref', path, `Missing system step ref "${step.ref}".`);
       }
 
-      if (step.kind === 'ai' && !registries.aiSteps?.[step.ref]) {
+      if (step.kind === 'ai' && !hasOwnRef(registries.aiSteps, step.ref)) {
         pushIssue(issues, 'missing-ai-step-ref', path, `Missing AI step ref "${step.ref}".`);
       }
 
@@ -86,7 +99,7 @@ const validateEntryRefs = (
         continue;
       }
 
-      const rule = registries.rules?.[step.ref];
+      const rule = ownRef(registries.rules, step.ref);
 
       if (!rule) {
         pushIssue(issues, 'missing-rule-ref', path, `Missing rule ref "${step.ref}".`);
@@ -127,7 +140,7 @@ const validateActionRefs = (
 ) => {
   const validateAction = (action: ActionDef, actionPath: string) => {
 
-      if (action.policy && !registries.policies?.[action.policy]) {
+      if (action.policy && !hasOwnRef(registries.policies, action.policy)) {
         pushIssue(
           issues,
           'missing-policy-ref',
@@ -137,7 +150,7 @@ const validateActionRefs = (
       }
 
       for (const guard of action.guards ?? []) {
-        if (!registries.guards?.[guard]) {
+        if (!hasOwnRef(registries.guards, guard)) {
           pushIssue(
             issues,
             'missing-guard-ref',
@@ -172,7 +185,7 @@ const validateNotificationRefs = (
   issues: FlowkitValidationIssue[],
 ) => {
   for (const notification of notificationBindings(binding)) {
-      if (!registries.templates?.[notification.template]) {
+      if (!hasOwnRef(registries.templates, notification.template)) {
         pushIssue(
           issues,
           'missing-template-ref',
@@ -182,7 +195,7 @@ const validateNotificationRefs = (
       }
 
       for (const channel of notification.channels) {
-        if (!registries.channels?.[channel]) {
+        if (!hasOwnRef(registries.channels, channel)) {
           pushIssue(
             issues,
             'missing-channel-ref',

@@ -146,6 +146,27 @@ const factInterpreter = createFlowkitWorkflow({
 export async function factFlowkitWorkflow(input: FlowkitWorkflowInput) { return await factInterpreter(input); }
 export const factFlowkitInput = (): FlowkitWorkflowInput => ({ published: publishDefinition({ definition: factDefinition }), subject: { id: 'fact-1', organizationId: 'org-1' } });
 
+// A rule step whose ref is named like an Object.prototype member and is NOT registered. The
+// interpreter must treat it as an unregistered rule (no automatic action), not call an inherited
+// function and fail the workflow task.
+const protoRuleDefinition: FlowDefinition = {
+  id: 'proto-rule-flow', version: 1, roles: [], initialStage: 'checking',
+  stages: {
+    checking: {
+      steady: true,
+      entry: [{ kind: 'rule', ref: 'constructor' }],
+      actions: { approve: { to: 'approved', kind: 'system' } },
+    },
+    approved: { final: true },
+  },
+};
+const protoRuleInterpreter = createFlowkitWorkflow({
+  activityTaskQueue: 'flowkit-temporal-workflow-test',
+  registries: { rules: {} },
+});
+export async function protoRuleFlowkitWorkflow(input: FlowkitWorkflowInput) { return await protoRuleInterpreter(input); }
+export const protoRuleFlowkitInput = (): FlowkitWorkflowInput => ({ published: publishDefinition({ definition: protoRuleDefinition }), subject: { id: 'proto-rule-1', organizationId: 'org-1' } });
+
 const loopDefinition: FlowDefinition = {
   id: 'loop-flow', version: 1, roles: [], initialStage: 'loop',
   stages: { loop: { entry: [{ kind: 'rule', ref: 'loop' }], actions: { loop: { to: 'loop', kind: 'system' } } } },

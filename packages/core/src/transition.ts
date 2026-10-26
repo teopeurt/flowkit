@@ -125,6 +125,16 @@ const validateTracks = (
   }
 };
 
+/**
+ * Looks a named ref up in a consumer-supplied registry, counting ONLY the registry's own
+ * entries. A plain `registry[name]` also resolves inherited `Object.prototype` members
+ * (`constructor`, `toString`, `valueOf`, ...), which are functions: an unregistered policy
+ * named `toString` would then be treated as registered and AUTHORIZE the transition. Refs are
+ * data authored in a definition, so a missing one must always fail fast, whatever its name.
+ */
+const ownRef = <T>(registry: Readonly<Record<string, T>> | undefined, name: string): T | undefined =>
+  registry !== undefined && Object.hasOwn(registry, name) ? registry[name] : undefined;
+
 const buildPredicateContext = (
   definition: FlowDefinition,
   state: FlowState,
@@ -233,7 +243,7 @@ export function transition(
   const predicateContext = buildPredicateContext(definition, state, command, context);
 
   if (actionDefinition.policy) {
-    const policy = context.policies?.[actionDefinition.policy];
+    const policy = ownRef(context.policies, actionDefinition.policy);
 
     if (!policy) {
       throw new MissingPolicyError(actionDefinition.policy, command.action);
@@ -245,7 +255,7 @@ export function transition(
   }
 
   for (const guardName of actionDefinition.guards ?? []) {
-    const guard = context.guards?.[guardName];
+    const guard = ownRef(context.guards, guardName);
 
     if (!guard) {
       throw new MissingGuardError(guardName, command.action);

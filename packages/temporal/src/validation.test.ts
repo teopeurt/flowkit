@@ -206,6 +206,96 @@ describe('validateFlowkit', () => {
     expect(codes(issues)).toContainEqual(expected);
   });
 
+  describe('refs named like Object.prototype members are still missing refs', () => {
+    // A registry is a plain object, so `registry['toString']` resolves to an inherited
+    // function. Each lookup must count only own entries; otherwise a definition that names an
+    // unregistered ref `constructor` / `toString` passes boot validation (or crashes it).
+    const protoNames = ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__'];
+
+    // `definition()` declares every ref once; point one ref at a prototype name and give the
+    // registries NO entry of that name. Each case replaces the original ref with the name.
+    const cases: Array<{
+      what: string;
+      code: string;
+      mutate: (input: FlowDefinition, name: string) => void;
+      registryKey: string;
+    }> = [
+      {
+        what: 'policy',
+        code: 'missing-policy-ref',
+        registryKey: 'policies',
+        mutate: (input, name) => {
+          input.stages.draft.actions!.submit.policy = name;
+        },
+      },
+      {
+        what: 'guard',
+        code: 'missing-guard-ref',
+        registryKey: 'guards',
+        mutate: (input, name) => {
+          input.stages.draft.actions!.submit.guards = [name];
+        },
+      },
+      {
+        what: 'system step',
+        code: 'missing-system-step-ref',
+        registryKey: 'systemSteps',
+        mutate: (input, name) => {
+          input.stages.draft.entry![0] = { kind: 'system', ref: name };
+        },
+      },
+      {
+        what: 'AI step',
+        code: 'missing-ai-step-ref',
+        registryKey: 'aiSteps',
+        mutate: (input, name) => {
+          input.stages.draft.entry![1] = { kind: 'ai', ref: name, gate: 'human' };
+        },
+      },
+      {
+        what: 'rule',
+        code: 'missing-rule-ref',
+        registryKey: 'rules',
+        mutate: (input, name) => {
+          input.stages.review.entry = [{ kind: 'rule', ref: name }];
+        },
+      },
+      {
+        what: 'notification template',
+        code: 'missing-template-ref',
+        registryKey: 'templates',
+        mutate: (input, name) => {
+          input.stages.draft.actions!.submit.notify = { template: name, channels: ['email'] };
+        },
+      },
+      {
+        what: 'notification channel',
+        code: 'missing-channel-ref',
+        registryKey: 'channels',
+        mutate: (input, name) => {
+          input.stages.draft.actions!.submit.notify = { template: 'submitted', channels: [name] };
+        },
+      },
+    ];
+
+    for (const { what, code, mutate, registryKey } of cases) {
+      test.each(protoNames.map((name) => [name]))(`reports a missing ${what} ref named %s`, (name: string) => {
+        const input = definition();
+        mutate(input, name);
+        const available = registries() as Record<string, Record<string, unknown>>;
+        // The registry holds its usual entries but nothing called `name`.
+        expect(Object.hasOwn(available[registryKey], name)).toBe(false);
+
+        const issues = validateFlowkit({
+          published: publishRaw(input),
+          registries: available as ReturnType<typeof registries>,
+        });
+
+        expect(codes(issues)).toContainEqual(code);
+      });
+    }
+  });
+
   test('rejects final stages that schedule work', () => {
     const input = definition();
     input.stages.approved = {
