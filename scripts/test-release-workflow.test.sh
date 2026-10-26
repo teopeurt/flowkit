@@ -39,4 +39,18 @@ if [[ -z "$candidate_line" || -z "$publish_line" || "$candidate_line" -ge "$publ
   exit 1
 fi
 
+# release:version runs the sync script, a frozen install, and a build, so the
+# release PR job must install dependencies before changesets/action invokes it.
+if ! grep -Fq 'version-script: bun run release:version' "$release_workflow"; then
+  echo "release workflow must version packages through bun run release:version" >&2
+  exit 1
+fi
+
+install_line="$(grep -n 'Install dependencies' "$release_workflow" | head -1 | cut -d: -f1)"
+release_pr_line="$(grep -n 'Create or update the Changesets release pull request' "$release_workflow" | cut -d: -f1)"
+if [[ -z "$install_line" || -z "$release_pr_line" || "$install_line" -ge "$release_pr_line" ]]; then
+  echo "release PR job must install dependencies before running release:version" >&2
+  exit 1
+fi
+
 echo "release workflow contract passed"
