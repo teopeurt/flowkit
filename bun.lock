@@ -56,7 +56,7 @@
     },
     "packages/definitions": {
       "name": "@naakwu/flowkit-definitions",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "bin": {
         "flowkit": "./dist/bin.js",
       },

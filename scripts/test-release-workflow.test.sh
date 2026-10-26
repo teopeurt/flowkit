@@ -21,7 +21,10 @@ for required_fragment in \
   'bun run build' \
   'bunx playwright install --with-deps chromium' \
   'candidate_root="$(mktemp -d "$RUNNER_TEMP/flowkit-candidate.XXXXXX")"' \
-  'packages=(auth consumer core notify tasks temporal)' \
+  'packages=(auth consumer core notify tasks temporal definitions)' \
+  'demo_packages=(auth consumer core notify tasks temporal)' \
+  'const names = ["auth", "consumer", "core", "definitions", "notify", "tasks", "temporal"]' \
+  'demo_candidate_tarballs+=("${candidate_tarball_by_package[$package]}")' \
   'bash scripts/test-demo-candidate.sh'; do
   if ! grep -Fq "$required_fragment" "$release_workflow"; then
     echo "release workflow is missing candidate gate fragment: $required_fragment" >&2

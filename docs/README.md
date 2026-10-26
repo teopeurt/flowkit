@@ -1,6 +1,6 @@
 # Flowkit Reference Guide
 
-Flowkit is split into six reusable packages and one independent consumer demo:
+Flowkit is split into seven reusable packages and one independent consumer demo:
 
 ```text
 core -> definitions

@@ -13,3 +13,7 @@
 - Updated dependencies [603a238]
   - @naakwu/flowkit-consumer@1.0.0
   - @naakwu/flowkit-core@1.0.0
+- 3aaac51: Refs named like `Object.prototype` members (`constructor`, `toString`, `valueOf`,
+  `__proto__`) used to count as registered policy, guard, and rule refs, so a workflow could
+  authorise a transition on a ref that was never defined and then fail at `.run`. Registry and
+  boot validation now count only own entries, so a missing ref is rejected before execution.

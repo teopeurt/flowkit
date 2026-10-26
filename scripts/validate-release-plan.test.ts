@@ -6,6 +6,7 @@ const packageNames = [
   "@naakwu/flowkit-auth",
   "@naakwu/flowkit-consumer",
   "@naakwu/flowkit-core",
+  "@naakwu/flowkit-definitions",
   "@naakwu/flowkit-notify",
   "@naakwu/flowkit-tasks",
   "@naakwu/flowkit-temporal",
@@ -17,45 +18,57 @@ const planWith = (releases: Array<{ name: string; version: string }>) => ({
 });
 
 describe("validateReleasePlan", () => {
-  test("accepts exactly the six unpublished FlowKit packages at 0.2.0", () => {
-    expect(validateReleasePlan(planWith(packageNames.map((name) => ({ name, version: "0.2.0" }))))).toEqual(
-      "0.2.0",
+  test("accepts exactly the seven unpublished FlowKit packages at 1.0.0", () => {
+    expect(validateReleasePlan(planWith(packageNames.map((name) => ({ name, version: "1.0.0" }))))).toEqual(
+      "1.0.0",
     );
   });
 
   test("rejects a publish plan that omits a FlowKit package", () => {
     expect(() =>
-      validateReleasePlan(planWith(packageNames.slice(1).map((name) => ({ name, version: "0.2.0" })))),
-    ).toThrow("must include exactly the six FlowKit packages");
+      validateReleasePlan(planWith(packageNames.slice(1).map((name) => ({ name, version: "1.0.0" })))),
+    ).toThrow("must include exactly the seven FlowKit packages");
+  });
+
+  test("rejects a publish plan that omits only the definitions package", () => {
+    expect(() =>
+      validateReleasePlan(
+        planWith(
+          packageNames
+            .filter((name) => name !== "@naakwu/flowkit-definitions")
+            .map((name) => ({ name, version: "1.0.0" })),
+        ),
+      ),
+    ).toThrow("must include exactly the seven FlowKit packages");
   });
 
   test("rejects a publish plan with a changed target version", () => {
     expect(() =>
-      validateReleasePlan(planWith(packageNames.map((name) => ({ name, version: "0.2.1" })))),
-    ).toThrow("must target 0.2.0");
+      validateReleasePlan(planWith(packageNames.map((name) => ({ name, version: "1.0.1" })))),
+    ).toThrow("must target 1.0.0");
   });
 
   test("accepts the version supplied by a later lockstep release PR", () => {
     expect(
       validateReleasePlan(
-        planWith(packageNames.map((name) => ({ name, version: "0.2.1" }))),
-        "0.2.1",
+        planWith(packageNames.map((name) => ({ name, version: "1.0.1" }))),
+        "1.0.1",
       ),
-    ).toEqual("0.2.1");
+    ).toEqual("1.0.1");
   });
 
   test("rejects a publish plan that includes an unknown package", () => {
     expect(() =>
       validateReleasePlan(
         planWith([
-          ...packageNames.map((name) => ({ name, version: "0.2.0" })),
-          { name: "@naakwu/flowkit-unknown", version: "0.2.0" },
+          ...packageNames.map((name) => ({ name, version: "1.0.0" })),
+          { name: "@naakwu/flowkit-unknown", version: "1.0.0" },
         ]),
       ),
-    ).toThrow("must include exactly the six FlowKit packages");
+    ).toThrow("must include exactly the seven FlowKit packages");
   });
 
   test("rejects a publish plan with no packages", () => {
-    expect(() => validateReleasePlan(planWith([]))).toThrow("must include exactly the six FlowKit packages");
+    expect(() => validateReleasePlan(planWith([]))).toThrow("must include exactly the seven FlowKit packages");
   });
 });
