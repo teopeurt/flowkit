@@ -101,7 +101,31 @@ jobs:
 
       - name: Install Chromium for the candidate stack gate
         if: steps.publish_plan.outputs.has_releases == 'true'
-        run: bunx playwright install --with-deps chromium
+        run: |
+          set -euo pipefail
+          # scripts/test-demo-candidate.sh runs the demo's own `bun run stack:ci`, so the browser
+          # must match the Playwright version pinned in the demo lockfile. A bare `bunx playwright`
+          # resolves to the latest release and installs a browser build the demo's driver cannot find.
+          playwright_version="$(node -e '
+            const fs = require("node:fs");
+            const path = process.argv[1];
+            const text = fs.readFileSync(path, "utf8");
+            const versions = new Set(
+              [...text.matchAll(/^\s*"[^"]*playwright":\s*\[\s*"(?:[^"/]+\/)?playwright@([^"]+)"/gm)].map((match) => match[1]),
+            );
+            if (versions.size !== 1) {
+              const found = versions.size === 0 ? "none" : [...versions].sort().join(", ");
+              console.error(`expected exactly one resolved playwright version in ${path}, found: ${found}`);
+              process.exit(1);
+            }
+            process.stdout.write([...versions][0]);
+          ' flowkit-demo/bun.lock)"
+          if [[ -z "$playwright_version" ]]; then
+            echo "could not derive the demo's locked playwright version from flowkit-demo/bun.lock" >&2
+            exit 1
+          fi
+          echo "installing Chromium for playwright@${playwright_version} (demo lockfile pin)"
+          bunx "playwright@${playwright_version}" install --with-deps chromium
 
       - name: Test the exact candidates in the demo
         if: steps.publish_plan.outputs.has_releases == 'true'
