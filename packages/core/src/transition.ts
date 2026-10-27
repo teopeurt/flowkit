@@ -278,7 +278,10 @@ export function transition(
   const nextState: FlowState = {
     stage: actionDefinition.to,
     status: actionDefinition.status ?? state.status,
-    pendingRole: actionDefinition.pendingRole ?? nextStageDefinition.pendingRole ?? null,
+    pendingRole:
+      actionDefinition.pendingRole !== undefined
+        ? actionDefinition.pendingRole
+        : nextStageDefinition.pendingRole ?? null,
     tracks: nextTracks,
   };
 
