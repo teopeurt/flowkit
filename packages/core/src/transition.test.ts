@@ -386,4 +386,27 @@ describe('transition kernel', () => {
   test('no exported function accepts a detached transition record for later application', () => {
     expect('applyTransition' in flowkit).toBe(false);
   });
+
+  test('an action pendingRole of null clears the role; omitting it inherits the stage role', () => {
+    const definition = defineFlow({
+      id: 'pending-role-null',
+      version: 1,
+      roles: ['reviewer'],
+      initialStage: 'start',
+      stages: {
+        start: {
+          actions: {
+            clear: { to: 'review', kind: 'system', pendingRole: null },
+            inherit: { to: 'review', kind: 'system' },
+          },
+        },
+        review: { pendingRole: 'reviewer', actions: { done: { to: 'end', kind: 'system' } } },
+        end: { final: true },
+      },
+    });
+    const initial = buildInitialState(definition);
+
+    expect(transition(definition, initial, { action: 'clear' }).state.pendingRole).toEqual(null);
+    expect(transition(definition, initial, { action: 'inherit' }).state.pendingRole).toBe('reviewer');
+  });
 });
