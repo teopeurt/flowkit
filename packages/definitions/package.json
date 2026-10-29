@@ -28,16 +28,16 @@
   "dependencies": {
     "@naakwu/flowkit-core": "workspace:^",
     "@naakwu/flowkit-temporal": "workspace:^",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
-    "@temporalio/testing": "1.16.2",
-    "@temporalio/worker": "1.16.2",
-    "@temporalio/workflow": "1.16.2",
+    "@temporalio/testing": "1.24.0",
+    "@temporalio/worker": "1.24.0",
+    "@temporalio/workflow": "1.24.0",
     "@types/bun": "latest",
     "ajv": "^8.17.1",
-    "tsup": "^8.5.0",
-    "typescript": "^5",
+    "tsup": "^9.0.0",
+    "typescript": "^7",
     "zod-to-json-schema": "^3.25.0"
   }
 }
