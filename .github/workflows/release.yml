@@ -20,7 +20,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out FlowKit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -47,7 +47,7 @@ jobs:
       packages: write
     steps:
       - name: Check out FlowKit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -93,7 +93,7 @@ jobs:
 
       - name: Check out FlowKit demo
         if: steps.publish_plan.outputs.has_releases == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: naakwu/flowkit-demo
           path: flowkit-demo
