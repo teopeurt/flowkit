@@ -122,10 +122,10 @@ describe('public documentation contract', () => {
       name: 'flowkit-documentation-consumer', private: true, type: 'module', dependencies, overrides: dependencies,
     }, null, 2));
     await run(['bun', 'install', '--offline', '--ignore-scripts'], directory);
-    await writeFile(join(directory, 'quickstart.ts'), quickstarts.join('\n\n'));
+    await Promise.all(quickstarts.map((source, index) => writeFile(join(directory, `quickstart-${index}.ts`), source)));
     await writeFile(join(directory, 'tsconfig.json'), JSON.stringify({
       compilerOptions: { target: 'ES2022', module: 'ESNext', moduleResolution: 'bundler', strict: true, noEmit: true, skipLibCheck: true },
-      files: ['quickstart.ts'],
+      include: ['quickstart-*.ts'],
     }));
     await run(['bun', 'x', '--offline', 'tsc', '--project', 'tsconfig.json'], directory);
   }, 60_000);
