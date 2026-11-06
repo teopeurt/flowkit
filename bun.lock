@@ -10,7 +10,7 @@
     },
     "packages/auth": {
       "name": "@teopeurt/flowkit-auth",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
@@ -32,7 +32,7 @@
     },
     "packages/consumer": {
       "name": "@teopeurt/flowkit-consumer",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@teopeurt/flowkit-core": "workspace:^",
         "@teopeurt/flowkit-tasks": "workspace:^",
@@ -45,7 +45,7 @@
     },
     "packages/core": {
       "name": "@teopeurt/flowkit-core",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
@@ -56,7 +56,7 @@
     },
     "packages/definitions": {
       "name": "@teopeurt/flowkit-definitions",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "bin": {
         "flowkit": "./dist/bin.js",
       },
@@ -78,7 +78,7 @@
     },
     "packages/notify": {
       "name": "@teopeurt/flowkit-notify",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@noble/hashes": "^2.0.1",
         "zod": "^3.25.42",
@@ -90,7 +90,7 @@
     },
     "packages/tasks": {
       "name": "@teopeurt/flowkit-tasks",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@teopeurt/flowkit-core": "workspace:^",
         "@noble/hashes": "^2.0.1",
@@ -103,7 +103,7 @@
     },
     "packages/temporal": {
       "name": "@teopeurt/flowkit-temporal",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@teopeurt/flowkit-consumer": "workspace:^",
         "@teopeurt/flowkit-core": "workspace:^",
