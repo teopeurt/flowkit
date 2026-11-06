@@ -5,3 +5,5 @@ FlowKit packages release in lockstep. The initial private publication is the sev
 After the initial publication, add a changeset for every publishable change, run `release:version` through the Changesets release PR workflow, and then use `release:plan` and `release:validate` to check the packages ready for publication.
 
 `bun run release:version` is more than `changeset version`. It runs `changeset version`, then `scripts/sync-release-versions.ts` rewrites each package's `FLOWKIT_*_VERSION` constant and the seven `bun.lock` workspace version entries, and finally verifies the lockfile with `bun install --frozen-lockfile` and rebuilds the packages. The release PR therefore commits manifests, version constants, and the lockfile together; do not hand-edit those files during a release.
+
+Published package manifests use concrete semver ranges for internal FlowKit dependencies (not `workspace:`), so packed artifacts remain installable outside the monorepo. Use workspace/file overrides only for local validation and restore the released range before publishing.

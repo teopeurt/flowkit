@@ -32,8 +32,8 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@teopeurt/flowkit-consumer": "workspace:^",
-    "@teopeurt/flowkit-core": "workspace:^",
+    "@teopeurt/flowkit-consumer": "^1.1.0",
+    "@teopeurt/flowkit-core": "^1.1.0",
     "@noble/hashes": "^2.0.1",
     "@temporalio/workflow": "1.16.2"
   },
