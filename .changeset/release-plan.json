@@ -5,21 +5,21 @@
       {
         "kind": "publish",
         "name": "@teopeurt/flowkit-auth",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "access": "restricted",
         "tag": "latest"
       },
       {
         "kind": "publish",
         "name": "@teopeurt/flowkit-core",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "access": "restricted",
         "tag": "latest"
       },
       {
         "kind": "publish",
         "name": "@teopeurt/flowkit-notify",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "access": "restricted",
         "tag": "latest"
       }
@@ -28,7 +28,7 @@
       {
         "kind": "publish",
         "name": "@teopeurt/flowkit-tasks",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "access": "restricted",
         "tag": "latest"
       }
@@ -37,7 +37,7 @@
       {
         "kind": "publish",
         "name": "@teopeurt/flowkit-consumer",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "access": "restricted",
         "tag": "latest"
       }
@@ -46,7 +46,7 @@
       {
         "kind": "publish",
         "name": "@teopeurt/flowkit-temporal",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "access": "restricted",
         "tag": "latest"
       }
@@ -55,7 +55,7 @@
       {
         "kind": "publish",
         "name": "@teopeurt/flowkit-definitions",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "access": "restricted",
         "tag": "latest"
       }
