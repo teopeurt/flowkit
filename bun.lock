@@ -10,7 +10,7 @@
     },
     "packages/auth": {
       "name": "@naakwu/flowkit-auth",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
@@ -32,7 +32,7 @@
     },
     "packages/consumer": {
       "name": "@naakwu/flowkit-consumer",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@naakwu/flowkit-core": "workspace:^",
         "@naakwu/flowkit-tasks": "workspace:^",
@@ -45,7 +45,7 @@
     },
     "packages/core": {
       "name": "@naakwu/flowkit-core",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
@@ -56,7 +56,7 @@
     },
     "packages/definitions": {
       "name": "@naakwu/flowkit-definitions",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "bin": {
         "flowkit": "./dist/bin.js",
       },
@@ -78,7 +78,7 @@
     },
     "packages/notify": {
       "name": "@naakwu/flowkit-notify",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@noble/hashes": "^2.0.1",
         "zod": "^3.25.42",
@@ -90,7 +90,7 @@
     },
     "packages/tasks": {
       "name": "@naakwu/flowkit-tasks",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@naakwu/flowkit-core": "workspace:^",
         "@noble/hashes": "^2.0.1",
@@ -103,7 +103,7 @@
     },
     "packages/temporal": {
       "name": "@naakwu/flowkit-temporal",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "dependencies": {
         "@naakwu/flowkit-consumer": "workspace:^",
         "@naakwu/flowkit-core": "workspace:^",
