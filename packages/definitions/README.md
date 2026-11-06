@@ -2,6 +2,22 @@
 
 # @teopeurt/flowkit-definitions
 
+## Install from GitHub Packages
+
+GitHub Packages requires a GitHub token with `read:packages`, even for public packages. Set `GITHUB_TOKEN`, then add this to `.npmrc`:
+
+```sh
+@teopeurt:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+```sh
+bun add @teopeurt/flowkit-definitions
+bunx flowkit definitions validate "definitions/**/*.yaml"
+```
+
+For a non-engineer walkthrough, see the [CLI quickstart](../../docs/cli-quickstart.md).
+
 Authoring surface for Flowkit workflow definitions. The definition model itself lives in
 `@teopeurt/flowkit-core`; this package owns how a definition is written down and how it is checked
 before it reaches a worker bundle.
@@ -86,6 +102,8 @@ Anchors and aliases are expanded before the result is returned, so a YAML-author
 TypeScript twin produce the same `publishDefinition` `definitionHash`.
 
 ## Validating from the CLI
+
+> **Important:** Without `--registries`, declared-reference checks are **SKIPPED**. A typo in a policy name passes unless a registries manifest is supplied. See the [CLI quickstart](../../docs/cli-quickstart.md).
 
 ```sh
 flowkit definitions validate "definitions/*.yaml" "definitions/**/*.yaml" --registries definitions/registries.yaml

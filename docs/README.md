@@ -12,5 +12,6 @@ auth
 ```
 
 Read the [package contracts](./package-contracts.md) for public API boundaries,
-[definitions in YAML](./definitions-yaml.md) for the definition authoring format, and
+[definitions in YAML](./definitions-yaml.md) for the definition authoring format,
+[CLI quickstart](./cli-quickstart.md) for a walkthrough, and
 [testing and operations](./testing-and-operations.md) for the disposable stack.

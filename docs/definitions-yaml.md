@@ -309,8 +309,12 @@ names the offending position.
 
 ### 8.2 CLI contract
 
+> **Warning:** Without `--registries`, declared-reference validation is **SKIPPED**. A typo in a policy, guard, rule, or step name can pass. Supply a registries manifest to check references.
+
+See the [CLI quickstart](./cli-quickstart.md) for a walkthrough.
+
 ```sh
-flowkit definitions validate <glob-or-path>... [--registries <file>] [--json]
+flowkit definitions validate <glob-or-path>... [--registries <file>] [--json] [--hash]
 ```
 
 | Argument | Behaviour |
@@ -381,6 +385,7 @@ fatal failure also writes its message to stderr. Per-file output (shape; values 
     {
       "path": "/abs/path/to/definition.yaml",
       "kind": "valid | invalid | unreadable | internal-error",
+      "hash": "sha256:<64 lowercase hex> | null",
       "issues": [
         { "path": "stages.draft", "line": 12, "column": 5, "code": "unreachable-stage", "message": "..." }
       ],
