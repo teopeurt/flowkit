@@ -18,23 +18,25 @@ const trackDefSchema: z.ZodType<TrackDef> = z
 
 const stepDefSchema: z.ZodType<StepDef> = z
   .object({
-    kind: z.enum(['system', 'ai', 'rule']),
+    kind: z.enum(['system', 'ai', 'rule', 'orchestrate']),
     ref: z.string(),
     gate: z.enum(['human', 'auto']).optional(),
     decide: z.string().optional(),
   })
   .strict()
   .superRefine((step, ctx) => {
-    if (step.gate !== undefined && step.kind !== 'ai') {
-      addIssue(ctx, ['gate'], `Step gate is only accepted on AI steps, not "${step.kind}" steps.`);
+    const gated = step.kind === 'ai' || step.kind === 'orchestrate';
+
+    if (step.gate !== undefined && !gated) {
+      addIssue(ctx, ['gate'], `Step gate is only accepted on AI and orchestrate steps, not "${step.kind}" steps.`);
     }
 
-    if (step.kind === 'ai' && step.gate === undefined) {
-      addIssue(ctx, ['gate'], `AI step "${step.ref}" must declare gate "human" or "auto".`);
+    if (gated && step.gate === undefined) {
+      addIssue(ctx, ['gate'], `${step.kind === 'ai' ? 'AI' : 'Orchestrate'} step "${step.ref}" must declare gate "human" or "auto".`);
     }
 
     if (step.gate === 'auto' && step.decide === undefined) {
-      addIssue(ctx, ['decide'], `AI step "${step.ref}" with gate "auto" must name a deciding rule in "decide".`);
+      addIssue(ctx, ['decide'], `Step "${step.ref}" with gate "auto" must name a deciding rule in "decide".`);
     }
 
     if (step.decide !== undefined && step.gate !== 'auto') {
@@ -93,7 +95,14 @@ const stageDefSchema: z.ZodType<StageDef> = z
     sla: slaSchema.optional(),
     actions: z.record(actionDefSchema).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((stage, ctx) => {
+    const orchestrations = (stage.entry ?? []).flatMap((step, index) => (step.kind === 'orchestrate' ? [index] : []));
+
+    if (orchestrations.length > 1) {
+      addIssue(ctx, ['entry', orchestrations[1]], 'A stage may declare at most one orchestrate step.');
+    }
+  });
 
 const addIssue = (
   ctx: z.RefinementCtx,

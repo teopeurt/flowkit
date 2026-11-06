@@ -87,6 +87,9 @@ const REGISTRY_DEPENDENT_CODES = new Set([
   'missing-rule-ref',
   'missing-system-step-ref',
   'missing-ai-step-ref',
+  'missing-orchestrator-ref',
+  'orchestrator-agents-empty',
+  'orchestrator-limit-invalid',
   'missing-template-ref',
   'missing-channel-ref',
   'rule-action-unavailable',
@@ -94,7 +97,7 @@ const REGISTRY_DEPENDENT_CODES = new Set([
 ]);
 
 const SKIPPED_NOTE =
-  'declared-ref validation (policies, guards, rules, system steps, AI steps, templates, channels)';
+  'declared-ref validation (policies, guards, rules, system steps, AI steps, orchestrators, templates, channels)';
 
 /* -------------------------------------------------------------------------- */
 /* Failures                                                                    */
@@ -137,6 +140,7 @@ const MANIFEST_SECTIONS = [
   'rules',
   'systemSteps',
   'aiSteps',
+  'orchestrators',
   'templates',
   'channels',
 ] as const;
@@ -263,6 +267,35 @@ const buildRegistriesFromManifest = (source: string): FlowkitValidationRegistrie
     }
   }
 
+  // An orchestrator declares data only: its agents and, optionally, numeric limits. Activity options
+  // and handlers are code and are never part of a manifest.
+  const orchestrators: Record<string, Record<string, unknown>> = Object.create(null);
+  const orchestratorsValue = manifest.orchestrators;
+  if (orchestratorsValue !== undefined && orchestratorsValue !== null) {
+    if (typeof orchestratorsValue !== 'object' || Array.isArray(orchestratorsValue)) {
+      throw new Error('section "orchestrators" must be a mapping of orchestrator names.');
+    }
+
+    for (const [name, entry] of Object.entries(orchestratorsValue as Record<string, unknown>)) {
+      if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
+        throw new Error(`orchestrator "${name}" must declare an "agents" list.`);
+      }
+
+      const record = entry as Record<string, unknown>;
+      if (!Array.isArray(record.agents) || record.agents.some((agent) => typeof agent !== 'string')) {
+        throw new Error(`orchestrator "${name}" must declare an "agents" list of strings.`);
+      }
+
+      const { agents, maxTasks, maxConcurrency, failFast, maxOutputBytes, ...unknown } = record;
+      const unknownKeys = Object.keys(unknown);
+      if (unknownKeys.length > 0) {
+        throw new Error(`orchestrator "${name}" has unknown field "${unknownKeys[0]}".`);
+      }
+
+      orchestrators[name] = { agents, maxTasks, maxConcurrency, failFast, maxOutputBytes };
+    }
+  }
+
   const namesOf = (section: (typeof MANIFEST_SECTIONS)[number]): string[] =>
     sectionNames(section, manifest[section]);
 
@@ -275,6 +308,7 @@ const buildRegistriesFromManifest = (source: string): FlowkitValidationRegistrie
     })),
     systemSteps: recordOf(namesOf('systemSteps'), () => ({})),
     aiSteps: recordOf(namesOf('aiSteps'), () => ({})),
+    orchestrators: orchestrators as unknown as FlowkitValidationRegistries['orchestrators'],
     templates: recordOf(namesOf('templates'), () => ({})),
     channels: recordOf(namesOf('channels'), () => ({})),
   } as FlowkitValidationRegistries;

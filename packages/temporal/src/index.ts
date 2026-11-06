@@ -15,6 +15,7 @@ export {
   parseSlaDuration,
   validateFlowkit,
 } from './validation';
+export { FLOWKIT_ORCHESTRATION_DEFAULTS, FLOWKIT_ORCHESTRATION_HARD_LIMIT } from './contracts';
 export type {
   CommandEnvelope,
   CommandOrigin,
@@ -31,6 +32,9 @@ export type {
   FlowkitDeclaredRefs,
   FlowkitExecutionState,
   FlowkitNotificationBinding,
+  FlowkitOrchestrationActivities,
+  FlowkitOrchestrationTaskState,
+  FlowkitOrchestratorRegistration,
   FlowkitStateView,
   FlowkitStepResult,
   FlowkitSubject,
@@ -39,6 +43,12 @@ export type {
   FlowkitRule,
   FlowkitRuleRegistration,
   FlowkitWorkflowInput,
+  OrchestrationStepInput,
+  OrchestrationTask,
+  OrchestrationTaskResult,
+  OrchestrationTaskStatus,
+  PlanOrchestrationInput,
+  PlanOrchestrationOutput,
   PublishedFlowDefinition,
   RecordStageReadyInput,
   RecordTransitionInput,
@@ -46,6 +56,10 @@ export type {
   ResolveActionContextInput,
   ResolvedActionContext,
   RuleContext,
+  RunSubagentInput,
+  RunSubagentOutput,
+  SynthesizeOrchestrationInput,
+  SynthesizeOrchestrationOutput,
 } from './contracts';
 export type {
   FlowkitValidationIssue,

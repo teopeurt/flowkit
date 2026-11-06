@@ -22,11 +22,12 @@ export interface FlowkitActorRef {
 
 export interface FlowkitStepResult {
   ref: string;
-  kind: 'system' | 'ai' | 'rule';
-  status: 'completed' | 'degraded_to_human';
+  kind: 'system' | 'ai' | 'rule' | 'orchestrate';
+  status: 'completed' | 'degraded_to_human' | 'running' | 'superseded';
   entryEpoch: number;
   output?: unknown;
   gateDecision?: { outcome: 'auto' | 'human'; action?: string };
+  tasks?: Array<{ id: string; agent: string; status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'; outputRef?: string }>;
 }
 
 export interface FlowkitStateView {

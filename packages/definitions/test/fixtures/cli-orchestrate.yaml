@@ -1,0 +1,16 @@
+id: orchestrate-flow
+version: 1
+roles: [reviewer]
+initialStage: work
+stages:
+  work:
+    pendingRole: reviewer
+    steady: true
+    sla: { after: 6h, escalate: { notify: reviewer } }
+    entry:
+      - { kind: orchestrate, ref: build_feature, gate: auto, decide: all_clean }
+    actions:
+      proceed: { to: done, kind: system }
+      approve: { to: done, kind: human, policy: reviewer_can_approve }
+  done:
+    final: true

@@ -148,7 +148,7 @@ channels:
   inbox: {}
 ```
 
-Sections are `policies`, `guards`, `rules`, `systemSteps`, `aiSteps`, `templates` and `channels`. The
+Sections are `policies`, `guards`, `rules`, `systemSteps`, `aiSteps`, `orchestrators`, `templates` and `channels`. The
 manifest may be YAML or JSON and is parsed with the same YAML 1.1 rules as a definition, so a name
 that looks numeric or boolean must be quoted (`policies: { "010": {} }`); an empty section
 (`policies:`) declares no names. Names are matched as own entries only, so a definition referring to

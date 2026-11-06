@@ -1,11 +1,13 @@
 import {
   allHandlersFinished,
   ApplicationFailure,
+  CancellationScope,
   condition,
   continueAsNew,
   currentUpdateInfo,
   defineQuery,
   defineUpdate,
+  isCancellation,
   proxyActivities,
   setHandler,
   Trigger,
@@ -17,12 +19,17 @@ import {
   getDeclaredActions,
   transition,
 } from '@naakwu/flowkit-core';
-import type { FlowCommand, FlowState, NotificationBinding } from '@naakwu/flowkit-core';
+import type { FlowCommand, FlowState, NotificationBinding, StepDef } from '@naakwu/flowkit-core';
 
+import { FLOWKIT_ORCHESTRATION_DEFAULTS, FLOWKIT_ORCHESTRATION_HARD_LIMIT } from './contracts';
 import type {
   CommandEnvelope,
   FlowkitActivityRegistry,
   FlowkitExecutionState,
+  FlowkitOrchestrationActivities,
+  FlowkitOrchestratorRegistration,
+  OrchestrationTask,
+  OrchestrationTaskResult,
   FlowkitPureRegistries,
   FlowkitNotificationBinding,
   FlowkitSignalCommand,
@@ -36,6 +43,41 @@ import { parseSlaDuration } from './validation';
 
 const isFactsObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** UTF-8 byte length without TextEncoder, which the deterministic workflow sandbox may not provide. */
+const utf8Length = (text: string): number => {
+  let bytes = 0;
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+};
+
+const resolveOrchestrationLimits = (registration: FlowkitOrchestratorRegistration) => ({
+  maxTasks: Math.min(registration.maxTasks ?? FLOWKIT_ORCHESTRATION_DEFAULTS.maxTasks, FLOWKIT_ORCHESTRATION_HARD_LIMIT),
+  maxConcurrency: Math.min(registration.maxConcurrency ?? FLOWKIT_ORCHESTRATION_DEFAULTS.maxConcurrency, FLOWKIT_ORCHESTRATION_HARD_LIMIT),
+  failFast: registration.failFast ?? FLOWKIT_ORCHESTRATION_DEFAULTS.failFast,
+  maxOutputBytes: registration.maxOutputBytes ?? FLOWKIT_ORCHESTRATION_DEFAULTS.maxOutputBytes,
+});
+
+/** Why a plan cannot be run, or undefined when it is acceptable. */
+const planProblem = (
+  tasks: unknown,
+  registration: FlowkitOrchestratorRegistration,
+  maxTasks: number,
+): string | undefined => {
+  if (!Array.isArray(tasks)) return 'plan did not return a task list';
+  if (tasks.length > maxTasks) return `plan has ${tasks.length} tasks, more than the limit of ${maxTasks}`;
+  const seen = new Set<string>();
+  for (const task of tasks as OrchestrationTask[]) {
+    if (task === null || typeof task !== 'object' || typeof task.id !== 'string' || task.id === '') return 'plan task has no id';
+    if (seen.has(task.id)) return `plan repeats task id "${task.id}"`;
+    seen.add(task.id);
+    if (typeof task.agent !== 'string' || !registration.agents.includes(task.agent)) return `plan names unknown agent "${String(task.agent)}"`;
+  }
+  return undefined;
+};
 
 const normalizeNotifications = (
   binding: NotificationBinding | undefined,
@@ -116,6 +158,9 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
     const commands: Array<CommandEnvelope & { completion?: Trigger<FlowkitStateView> }> = [];
     let draining = false;
     let automaticTransitions = 0;
+    /** In-flight orchestrations. They never cross Continue-As-New: it is deferred until this is empty. */
+    const orchestrations = new Map<string, { epoch: number; scope: CancellationScope; settled: Promise<void> }>();
+    const orchestrationActivityProxies = new Map<string, FlowkitOrchestrationActivities>();
 
     const view = () => stateView(execution, definition);
     const adaptedView = () =>
@@ -139,6 +184,169 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
     };
     setHandler(update, (command) => enqueueUpdate('human', command));
     setHandler(signalUpdate, (command) => enqueueUpdate('signal', command));
+
+    const cancelStaleOrchestrations = () => {
+      for (const orchestration of orchestrations.values()) {
+        if (orchestration.epoch !== execution.entryEpoch) orchestration.scope.cancel();
+      }
+    };
+
+    const orchestrationActivities = (ref: string, registration: FlowkitOrchestratorRegistration): FlowkitOrchestrationActivities => {
+      let proxy = orchestrationActivityProxies.get(ref);
+      if (!proxy) {
+        proxy = proxyActivities<FlowkitOrchestrationActivities>({
+          taskQueue: config.activityTaskQueue,
+          startToCloseTimeout: '1 minute',
+          ...(config.activityOptions ?? {}),
+          ...(registration.activityOptions ?? {}),
+        });
+        orchestrationActivityProxies.set(ref, proxy);
+      }
+      return proxy;
+    };
+
+    /**
+     * Runs one orchestration in the background: plan, bounded parallel subagents, synthesize. It never
+     * transitions state itself. At most it enqueues one rule-origin command, and only while its stage
+     * is still current. Anything unexpected degrades the step so a human decides.
+     */
+    const runOrchestration = async (args: {
+      key: string;
+      epoch: number;
+      index: number;
+      step: StepDef;
+      registration: FlowkitOrchestratorRegistration;
+      baseFacts: Record<string, unknown>;
+      reason: EntryReason;
+      priorTransition?: TransitionRecord;
+    }): Promise<void> => {
+      const { key, epoch, index, step, registration, baseFacts, reason, priorTransition } = args;
+      const limits = resolveOrchestrationLimits(registration);
+      const acts = orchestrationActivities(step.ref, registration);
+      const startState = execution.state;
+      const stale = () => execution.entryEpoch !== epoch;
+      const result = execution.stepResults[key];
+      const workflowId = workflowInfo().workflowId;
+      const identity = (...phase: string[]) => ({
+        workflowId,
+        ref: step.ref,
+        definition: definitionIdentity,
+        subject: input.subject,
+        state: startState,
+        entryEpoch: epoch,
+        stepIndex: index,
+        idempotencyKey: JSON.stringify([workflowId, epoch, index, ...phase]),
+        entryReason: reason,
+        priorTransition,
+      });
+      const setTask = (id: string, status: 'running' | 'completed' | 'failed' | 'cancelled', outputRef?: string) => {
+        const task = result.tasks?.find((candidate) => candidate.id === id);
+        if (task) {
+          task.status = status;
+          if (outputRef !== undefined) task.outputRef = outputRef;
+        }
+      };
+      const supersede = () => {
+        result.status = 'superseded';
+        for (const task of result.tasks ?? []) {
+          if (task.status === 'pending' || task.status === 'running') task.status = 'cancelled';
+        }
+      };
+      const degrade = () => {
+        result.status = 'degraded_to_human';
+      };
+
+      try {
+        const plan = await acts.planOrchestration(identity('plan'));
+        if (stale()) return supersede();
+        const problem = planProblem(plan?.tasks, registration, limits.maxTasks);
+        if (problem !== undefined) return degrade();
+        const tasks = plan.tasks;
+        result.tasks = tasks.map((task) => ({ id: task.id, agent: task.agent, status: 'pending' as const }));
+
+        const results = new Map<string, OrchestrationTaskResult>();
+        const queue = [...tasks];
+        const fanOut = new CancellationScope();
+        let stopLaunching = false;
+        const runTask = async (task: OrchestrationTask) => {
+          setTask(task.id, 'running');
+          try {
+            const output = await acts.runSubagent({ ...identity('task', task.id), taskId: task.id, agent: task.agent, input: task.input });
+            results.set(task.id, { id: task.id, agent: task.agent, status: 'completed', output: output?.output, outputRef: output?.outputRef });
+            setTask(task.id, 'completed', output?.outputRef);
+          } catch (error) {
+            if (isCancellation(error)) {
+              results.set(task.id, { id: task.id, agent: task.agent, status: 'cancelled' });
+              setTask(task.id, 'cancelled');
+            } else {
+              results.set(task.id, { id: task.id, agent: task.agent, status: 'failed', error: error instanceof Error ? error.message : 'Subagent failed.' });
+              setTask(task.id, 'failed');
+              if (limits.failFast) {
+                stopLaunching = true;
+                fanOut.cancel();
+              }
+            }
+          }
+        };
+        const worker = async () => {
+          while (!stopLaunching && !stale()) {
+            const task = queue.shift();
+            if (!task) return;
+            await runTask(task);
+          }
+        };
+        await fanOut.run(() => Promise.all(Array.from({ length: Math.min(limits.maxConcurrency, tasks.length) }, () => worker())));
+        if (stale()) return supersede();
+
+        const ordered: OrchestrationTaskResult[] = tasks.map((task) => results.get(task.id) ?? { id: task.id, agent: task.agent, status: 'cancelled' as const });
+        for (const task of ordered) {
+          if (task.status === 'cancelled') setTask(task.id, 'cancelled');
+        }
+
+        const synthesized = await acts.synthesizeOrchestration({ ...identity('synthesize'), results: ordered });
+        if (stale()) return supersede();
+        const output = synthesized?.output;
+        if (output !== undefined && utf8Length(JSON.stringify(output)) > limits.maxOutputBytes) return degrade();
+
+        result.status = 'completed';
+        result.output = output;
+        if (step.gate !== 'auto' || step.decide === undefined) return;
+
+        // Fail closed: a missing rule, a throw, no answer, or an exhausted loop budget all leave the stage to a human.
+        let action: string | undefined;
+        try {
+          const decider = Object.hasOwn(config.registries.rules ?? {}, step.decide) ? config.registries.rules?.[step.decide] : undefined;
+          action = decider?.run({
+            definition,
+            state: startState,
+            subject: input.subject.metadata ?? {},
+            facts: { ...baseFacts, ...(isFactsObject(output) ? output : {}) },
+            priorTransition,
+            gatedOutput: output,
+            tasks: ordered.map(({ id, agent, status }) => ({ id, agent, status })),
+          });
+        } catch {
+          action = undefined;
+        }
+        if (action && automaticTransitions < (config.maxAutomaticTransitionsPerTurn ?? 32)) {
+          automaticTransitions += 1;
+          result.gateDecision = { outcome: 'auto', action };
+          commands.push({ operationId: `orch:${epoch}:${index}`, origin: 'rule', command: { action, actorId: 'system' } });
+        } else {
+          result.gateDecision = { outcome: 'human' };
+        }
+      } catch (error) {
+        if (isCancellation(error) || stale()) supersede();
+        else degrade();
+      }
+    };
+
+    const startOrchestration = (args: Parameters<typeof runOrchestration>[0]) => {
+      const scope = new CancellationScope();
+      const settled = scope.run(() => runOrchestration(args)).then(() => undefined, () => undefined);
+      orchestrations.set(args.key, { epoch: args.epoch, scope, settled });
+      void settled.then(() => orchestrations.delete(args.key));
+    };
 
     const runEntry = async (
       reason: EntryReason,
@@ -198,6 +406,18 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
             if (error instanceof ApplicationFailure && error.type === 'FLOWKIT_AUTOMATIC_LOOP') throw error;
             execution.stepResults[key] = { ref: step.ref, kind: 'ai', status: 'degraded_to_human', entryEpoch: execution.entryEpoch };
           }
+          continue;
+        }
+
+        if (step.kind === 'orchestrate') {
+          const registration = Object.hasOwn(config.registries.orchestrators ?? {}, step.ref) ? config.registries.orchestrators?.[step.ref] : undefined;
+          if (!registration) {
+            execution.stepResults[key] = { ref: step.ref, kind: 'orchestrate', status: 'degraded_to_human', entryEpoch: execution.entryEpoch };
+            continue;
+          }
+          // Started in the background so the stage returns to the command loop at once: humans, signals and the SLA stay live.
+          execution.stepResults[key] = { ref: step.ref, kind: 'orchestrate', status: 'running', entryEpoch: execution.entryEpoch, tasks: [] };
+          startOrchestration({ key, epoch: execution.entryEpoch, index, step, registration, baseFacts: { ...entryFacts }, reason, priorTransition });
           continue;
         }
 
@@ -339,6 +559,7 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
         execution.state = projected.state;
         execution.sequence += 1;
         execution.entryEpoch += 1;
+        cancelStaleOrchestrations();
         execution.completed = definition.stages[execution.state.stage]?.final === true;
         if (!execution.completed) {
           const completionTransferred = await runEntry('transition', outcome.transition, envelope.completion);
@@ -359,11 +580,15 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
         envelope.completion?.reject(error instanceof ApplicationFailure ? error : commandFailure(error));
       }
 
-      if (
-        !execution.completed &&
+      const wantsContinueAsNew = !execution.completed &&
         commands.length === 0 &&
-        (workflowInfo().continueAsNewSuggested || (!input.resume && config.shouldContinueAsNew?.() === true))
-      ) {
+        (workflowInfo().continueAsNewSuggested || (!input.resume && config.shouldContinueAsNew?.() === true));
+      if (wantsContinueAsNew) {
+        // Orchestrations cancelled by the transition that just ran settle promptly; wait for them rather than
+        // deferring for nothing. One still running for the current stage defers Continue-As-New (it cannot cross runs).
+        await Promise.all([...orchestrations.values()].filter((orchestration) => orchestration.epoch !== execution.entryEpoch).map((orchestration) => orchestration.settled));
+      }
+      if (wantsContinueAsNew && orchestrations.size === 0 && commands.length === 0 && !execution.completed) {
         draining = true;
         await condition(allHandlersFinished);
         return await continueAsNew({
@@ -375,6 +600,7 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
       }
     }
 
+    await Promise.all([...orchestrations.values()].map((orchestration) => orchestration.settled));
     draining = true;
     await condition(allHandlersFinished);
     return adaptedView();

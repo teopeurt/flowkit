@@ -1,8 +1,10 @@
 import { flowSchema, getActionDefinition, lintInterpreterFlow } from '@naakwu/flowkit-core';
 import type { ActionDef, FlowDefinition, NotificationBinding } from '@naakwu/flowkit-core';
 
+import { FLOWKIT_ORCHESTRATION_HARD_LIMIT } from './contracts';
 import type {
   FlowkitDeclaredRefs,
+  FlowkitOrchestratorRegistration,
   FlowkitPureRegistries,
   PublishedFlowDefinition,
 } from './contracts';
@@ -78,6 +80,37 @@ const pushIssue = (
   issues.push({ code, path, message });
 };
 
+const isIntegerInRange = (value: unknown, min: number, max: number): boolean =>
+  typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+
+const validateOrchestratorRegistration = (
+  ref: string,
+  registration: FlowkitOrchestratorRegistration,
+  path: string,
+  issues: FlowkitValidationIssue[],
+) => {
+  const agents = registration.agents;
+
+  if (!Array.isArray(agents) || agents.length === 0 || agents.some((agent) => typeof agent !== 'string' || agent === '')) {
+    pushIssue(issues, 'orchestrator-agents-empty', path, `Orchestrator "${ref}" must declare a non-empty list of agent names.`);
+  }
+
+  const limits: Array<[string, unknown, number]> = [
+    ['maxTasks', registration.maxTasks, FLOWKIT_ORCHESTRATION_HARD_LIMIT],
+    ['maxConcurrency', registration.maxConcurrency, FLOWKIT_ORCHESTRATION_HARD_LIMIT],
+  ];
+
+  for (const [name, value, max] of limits) {
+    if (value !== undefined && !isIntegerInRange(value, 1, max)) {
+      pushIssue(issues, 'orchestrator-limit-invalid', path, `Orchestrator "${ref}" ${name} must be an integer from 1 to ${max}.`);
+    }
+  }
+
+  if (registration.maxOutputBytes !== undefined && !isIntegerInRange(registration.maxOutputBytes, 1, Number.MAX_SAFE_INTEGER)) {
+    pushIssue(issues, 'orchestrator-limit-invalid', path, `Orchestrator "${ref}" maxOutputBytes must be a positive integer.`);
+  }
+};
+
 const validateEntryRefs = (
   definition: FlowDefinition,
   registries: FlowkitValidationRegistries,
@@ -95,13 +128,27 @@ const validateEntryRefs = (
         pushIssue(issues, 'missing-ai-step-ref', path, `Missing AI step ref "${step.ref}".`);
       }
 
-      const ruleRef = step.kind === 'rule' ? step.ref : step.kind === 'ai' && step.gate === 'auto' ? step.decide : undefined;
+      if (step.kind === 'orchestrate') {
+        const orchestrator = ownRef(registries.orchestrators, step.ref);
+
+        if (!orchestrator) {
+          pushIssue(issues, 'missing-orchestrator-ref', path, `Missing orchestrator ref "${step.ref}".`);
+        } else {
+          validateOrchestratorRegistration(step.ref, orchestrator, path, issues);
+        }
+      }
+
+      const ruleRef = step.kind === 'rule'
+        ? step.ref
+        : (step.kind === 'ai' || step.kind === 'orchestrate') && step.gate === 'auto'
+          ? step.decide
+          : undefined;
 
       if (ruleRef === undefined) {
         continue;
       }
 
-      const rulePath = step.kind === 'ai' ? pathFor('stages', stageName, 'entry', index, 'decide') : path;
+      const rulePath = step.kind === 'rule' ? path : pathFor('stages', stageName, 'entry', index, 'decide');
       const rule = ownRef(registries.rules, ruleRef);
 
       if (!rule) {

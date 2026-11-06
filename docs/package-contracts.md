@@ -8,7 +8,7 @@ Only the entry points declared in each package's `package.json` `exports` map ar
 | `@naakwu/flowkit-definitions` | `.` | Definition authoring format (YAML) and the emitted definition JSON Schema. |
 | `@naakwu/flowkit-tasks` | `.` | Task projection, claim, inbox, invitation, and testing helpers. |
 | `@naakwu/flowkit-consumer` | `.` | Consumer integration contracts and `createFlowkitConsumer`. |
-| `@naakwu/flowkit-temporal` | `.`, `./workflow` | Published definition/runtime helpers and the Temporal workflow factory. |
+| `@naakwu/flowkit-temporal` | `.`, `./workflow` | Published definition/runtime helpers, the Temporal workflow factory, and the orchestration activity contracts. |
 | `@naakwu/flowkit-notify` | `.` | Notification templates, planning, adapters, delivery runtime, and testing helpers. |
 | `@naakwu/flowkit-auth` | `.`, `./roles`, `./better-auth`, `./nest`, `./testing` | Auth contracts plus explicit role, Better Auth, Nest, and testing integrations. |
 

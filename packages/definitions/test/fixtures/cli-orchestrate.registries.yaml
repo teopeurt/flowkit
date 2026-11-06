@@ -1,0 +1,11 @@
+# Registries manifest for cli-orchestrate.yaml: the orchestrator and its deciding rule are declared.
+policies:
+  reviewer_can_approve: {}
+rules:
+  all_clean:
+    actions: [proceed]
+orchestrators:
+  build_feature:
+    agents: [coder, tester]
+    maxTasks: 8
+    maxConcurrency: 2

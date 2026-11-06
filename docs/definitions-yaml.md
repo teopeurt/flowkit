@@ -73,9 +73,9 @@ Each entry step (`StepDef`):
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `kind` | `system` \| `ai` \| `rule` | Step kind. |
+| `kind` | `system` \| `ai` \| `rule` \| `orchestrate` | Step kind. |
 | `ref` | string | Name resolved from the consumer registry at runtime. This is the escape hatch: logic that cannot be serialised stays in code. |
-| `gate` | `human` \| `auto` | Only valid on `ai` steps, and required there. `human`: AI output is recorded for a person to act on. `auto`: the named `decide` rule may fire a system action from the output (see below). |
+| `gate` | `human` \| `auto` | Only valid on `ai` and `orchestrate` steps, and required there. `human`: AI output is recorded for a person to act on. `auto`: the named `decide` rule may fire a system action from the output (see below). |
 | `decide` | string | Required with `gate: auto`, rejected otherwise. Name of a rule in the consumer's `rules` registry. |
 
 **Auto gates.** `gate: auto` lets an AI step release its stage without a person, but only through a
@@ -116,7 +116,40 @@ Tracks and SLAs:
 
 ## 3. Complete example
 
+```
+
+**Orchestrate steps.** `kind: orchestrate` runs a chief-of-staff orchestrator: a plan activity returns a
+bounded list of subagent tasks, one activity per task runs in parallel under a concurrency cap, and a
+synthesize activity merges the results. The step requires `gate` exactly as an `ai` step does, so its
+output never transitions the flow by itself; with `gate: auto` the `decide` rule additionally receives
+`tasks` (the final status of every subagent) alongside `gatedOutput`. A stage may declare at most one
+`orchestrate` step.
+
 ```yaml
+entry:
+  - { kind: orchestrate, ref: buildFeature, gate: auto, decide: allSubagentsClean }
+```
+
+The orchestration runs **in the background**: stage entry starts it and returns at once, so the stage's
+SLA is armed and human actions and signals are handled while subagents work. The update that caused the
+stage entry returns when the orchestration has *started*, not finished. Because of that, a later `rule`
+step in the same entry does not see the orchestrator's output; only its `decide` rule does.
+
+- Limits (`maxTasks`, `maxConcurrency`, `failFast`, `maxOutputBytes`, activity options) belong to the
+  consumer's `orchestrators` registration, never to the definition. Defaults are 16 tasks, concurrency 4,
+  `failFast: false`, and 65536 bytes of output; tasks and concurrency are capped at 64.
+- A plan that names an agent outside the registration's `agents`, repeats a task id, exceeds `maxTasks`,
+  or fails, a failed synthesis, and an oversized output all set the step to `degraded_to_human`.
+- One failed subagent does not stop the others unless `failFast` is set; synthesis still runs and
+  `decide` sees the failed status, so it can refuse to release.
+- If the stage changes first (a human action, a signal, an SLA escalation), the orchestration is
+  cancelled, its step result becomes `superseded`, and its late results are discarded.
+- A releasing action is enqueued as a `rule`-origin command with operation id `orch:<epoch>:<index>` and
+  goes through the same guards, context resolution and projection as any other transition.
+- `continueAsNew` is deferred while an orchestration is running. Activity idempotency keys are
+  `[workflowId, entryEpoch, stepIndex, phase]`, with phase `"plan"`, `"synthesize"`, or `"task", taskId`.
+- `lintFlow` warns (`orchestrate-without-sla`) when a stage with an `orchestrate` step has no SLA.
+yaml
 id: sample-onboarding
 version: 2
 roles: [applicant, reviewer, supervisor]
@@ -456,6 +489,7 @@ never invokes a handler.
 | `rules` | `rule` step `ref` (also needs an `actions` list, see below). |
 | `systemSteps` | `system` step `ref`. |
 | `aiSteps` | `ai` step `ref`. |
+| `orchestrators` | `orchestrate` step `ref` (also needs an `agents` list and may declare `maxTasks`, `maxConcurrency`, `failFast`, `maxOutputBytes`). |
 | `templates` | Notification `template`. |
 | `channels` | Notification `channels`. |
 
@@ -469,6 +503,8 @@ systemSteps:
   prepare: {}
 aiSteps:
   summarize: {}
+orchestrators:
+  buildFeature: { agents: [coder, tester], maxTasks: 8 }
 guards:
   sla_expired: {}
 templates:

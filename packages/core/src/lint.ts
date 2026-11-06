@@ -100,6 +100,15 @@ export function lintFlow(definition: FlowDefinition): LintIssue[] {
       });
     }
 
+    if (!stage.final && !stage.sla && (stage.entry ?? []).some((step) => step.kind === 'orchestrate')) {
+      pushIssue(issues, {
+        code: 'orchestrate-without-sla',
+        severity: 'warning',
+        message: `Stage "${stageName}" runs an orchestrate step but declares no SLA. Orchestrations are long-running and should be bounded by an escalation.`,
+        path: `stages.${stageName}`,
+      });
+    }
+
     if (
       !stage.final &&
       !stage.steady &&

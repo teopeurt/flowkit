@@ -1,3 +1,4 @@
+import type { ActivityOptions } from '@temporalio/workflow';
 import type {
   AuthorizationPolicyRegistry,
   FlowCommand,
@@ -55,14 +56,31 @@ export interface CommandEnvelope {
   command: FlowCommand;
 }
 
+/** Lifecycle of one subagent task inside an orchestration. */
+export type OrchestrationTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+/** Per-task progress recorded on an orchestrate step result. Outputs are never kept here, only a reference. */
+export interface FlowkitOrchestrationTaskState {
+  id: string;
+  agent: string;
+  status: OrchestrationTaskStatus;
+  outputRef?: string;
+}
+
 export interface FlowkitStepResult {
   ref: string;
-  kind: 'system' | 'ai' | 'rule';
-  status: 'completed' | 'degraded_to_human';
+  kind: 'system' | 'ai' | 'rule' | 'orchestrate';
+  /**
+   * `running` and `superseded` apply to orchestrate steps only: an orchestration is in flight, or the
+   * stage changed before it finished and its late results were discarded.
+   */
+  status: 'completed' | 'degraded_to_human' | 'running' | 'superseded';
   entryEpoch: number;
   output?: unknown;
-  /** Present for `gate: auto` AI steps: whether the deciding rule released the stage or left it to a human. */
+  /** Present for `gate: auto` steps: whether the deciding rule released the stage or left it to a human. */
   gateDecision?: { outcome: 'auto' | 'human'; action?: string };
+  /** Orchestrate steps only: live per-subagent progress. */
+  tasks?: FlowkitOrchestrationTaskState[];
 }
 
 /** Full interpreter state; carried across Continue-As-New unchanged. */
@@ -235,8 +253,10 @@ export interface RuleContext {
   subject: Readonly<Record<string, unknown>>;
   facts: Readonly<Record<string, unknown>>;
   priorTransition?: TransitionRecord;
-  /** Set only when the rule is deciding an `auto` AI gate: that step's raw output. */
+  /** Set only when the rule is deciding an `auto` gate: that step's raw output. */
   gatedOutput?: unknown;
+  /** Set only when the rule is deciding an `auto` orchestrate gate: the final status of every subagent task. */
+  tasks?: ReadonlyArray<{ id: string; agent: string; status: 'completed' | 'failed' | 'cancelled' }>;
 }
 
 /**
@@ -254,11 +274,42 @@ export interface FlowkitRuleRegistration {
   actions: string[];
 }
 
+/** Hard ceiling on tasks and concurrency for one orchestration, whatever the registration asks for. */
+export const FLOWKIT_ORCHESTRATION_HARD_LIMIT = 64;
+
+/** Defaults applied when an orchestrator registration omits a limit. */
+export const FLOWKIT_ORCHESTRATION_DEFAULTS = {
+  maxTasks: 16,
+  maxConcurrency: 4,
+  failFast: false,
+  maxOutputBytes: 65_536,
+} as const;
+
+/**
+ * Registration of one named orchestrator. Limits live here, in compiled code, and never in the
+ * serialized definition, so a definition cannot change its own resource limits.
+ */
+export interface FlowkitOrchestratorRegistration {
+  /** Finite set of subagent names a plan may assign tasks to. Must not be empty. */
+  agents: string[];
+  /** Maximum tasks accepted from the plan (1 to 64, default 16). */
+  maxTasks?: number;
+  /** Maximum subagent activities running at once (1 to 64, default 4). */
+  maxConcurrency?: number;
+  /** When true the first failed task cancels the remaining ones (default false). */
+  failFast?: boolean;
+  /** Cap on the synthesized output, in UTF-8 bytes of its JSON form (default 65536). */
+  maxOutputBytes?: number;
+  /** Temporal activity options for this orchestrator's plan, subagent and synthesize activities. */
+  activityOptions?: ActivityOptions;
+}
+
 /** Compiled pure registries bundled with the workflow code. */
 export interface FlowkitPureRegistries {
   policies?: AuthorizationPolicyRegistry;
   guards?: GuardRegistry;
   rules?: Record<string, FlowkitRuleRegistration>;
+  orchestrators?: Record<string, FlowkitOrchestratorRegistration>;
 }
 
 /**
@@ -280,4 +331,80 @@ export interface FlowkitActivityRegistry {
   executeSystemStep(input: ExecuteSystemStepInput): Promise<ExecuteSystemStepOutput>;
   executeAiStep(input: ExecuteAiStepInput): Promise<ExecuteAiStepOutput>;
   dispatchNotification(input: DispatchNotificationInput): Promise<void>;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Orchestration activities (optional; implemented by the consumer's worker) */
+/* ------------------------------------------------------------------------ */
+
+/** Identity every orchestration activity receives; mirrors the AI and system step inputs. */
+export interface OrchestrationStepInput {
+  workflowId: string;
+  ref: string;
+  definition: DefinitionIdentity;
+  subject: FlowkitSubject;
+  state: FlowState;
+  entryEpoch: number;
+  stepIndex: number;
+  /**
+   * Serialized `[workflowId, entryEpoch, stepIndex, phase]` where phase is `"plan"`, `"synthesize"`, or
+   * `"task", taskId` for a subagent, so the three kinds of activity never share a key. Activities must be
+   * idempotent on it.
+   */
+  idempotencyKey: string;
+  entryReason: EntryReason;
+  priorTransition?: TransitionRecord;
+}
+
+/** One unit of work the plan assigns to a subagent. */
+export interface OrchestrationTask {
+  id: string;
+  agent: string;
+  input?: unknown;
+}
+
+export type PlanOrchestrationInput = OrchestrationStepInput;
+
+export interface PlanOrchestrationOutput {
+  tasks: OrchestrationTask[];
+}
+
+export interface RunSubagentInput extends OrchestrationStepInput {
+  taskId: string;
+  agent: string;
+  input?: unknown;
+}
+
+export interface RunSubagentOutput {
+  output?: unknown;
+  /** Reference to a large result stored outside workflow history. */
+  outputRef?: string;
+}
+
+/** The outcome of one task, as handed to the synthesize activity. */
+export interface OrchestrationTaskResult {
+  id: string;
+  agent: string;
+  status: 'completed' | 'failed' | 'cancelled';
+  output?: unknown;
+  outputRef?: string;
+  error?: string;
+}
+
+export interface SynthesizeOrchestrationInput extends OrchestrationStepInput {
+  results: OrchestrationTaskResult[];
+}
+
+export interface SynthesizeOrchestrationOutput {
+  output?: unknown;
+}
+
+/**
+ * Activities an orchestrate step needs. A separate interface so existing consumers, which implement
+ * only {@link FlowkitActivityRegistry}, are unaffected.
+ */
+export interface FlowkitOrchestrationActivities {
+  planOrchestration(input: PlanOrchestrationInput): Promise<PlanOrchestrationOutput>;
+  runSubagent(input: RunSubagentInput): Promise<RunSubagentOutput>;
+  synthesizeOrchestration(input: SynthesizeOrchestrationInput): Promise<SynthesizeOrchestrationOutput>;
 }
