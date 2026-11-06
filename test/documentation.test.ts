@@ -90,7 +90,7 @@ describe('public documentation contract', () => {
     const rootReadme = await readDocumentation('README.md');
     expect(rootReadme).toContain('Yarn Berry');
     expect(rootReadme).toContain('npmScopes:');
-    expect(rootReadme).toContain('naakwu:');
+    expect(rootReadme).toContain('teopeurt:');
     expect(rootReadme).toContain('npmRegistryServer: "https://npm.pkg.github.com"');
     expect(rootReadme).toContain('npmAuthToken: "${GITHUB_PACKAGES_TOKEN}"');
   });

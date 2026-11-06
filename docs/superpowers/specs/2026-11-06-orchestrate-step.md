@@ -81,7 +81,7 @@ No other fields. Limits and timeouts are *registration* data (§5), not definiti
 
 ### 5.1 Registration (boot-validated)
 
-```ts
+```text
 orchestrators: {
   buildFeature: {
     agents: ['planner', 'coder', 'tester'],   // finite set the plan may name
@@ -96,7 +96,7 @@ orchestrators: {
 
 ### 5.2 Activities (a separate optional interface, so existing consumers do not break)
 
-```ts
+```text
 interface FlowkitOrchestrationActivities {
   planOrchestration(i: PlanOrchestrationInput): Promise<{ tasks: OrchestrationTask[] }>;
   runSubagent(i: RunSubagentInput): Promise<{ output?: unknown; outputRef?: string }>;

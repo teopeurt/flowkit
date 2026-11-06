@@ -47,7 +47,7 @@ For Yarn Berry (v2+), configure the scope in `.yarnrc.yml` instead of relying on
 
 ```yml
 npmScopes:
-  naakwu:
+  teopeurt:
     npmRegistryServer: "https://npm.pkg.github.com"
     npmAlwaysAuth: true
     npmAuthToken: "${GITHUB_PACKAGES_TOKEN}"
