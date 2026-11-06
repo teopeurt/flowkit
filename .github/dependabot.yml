@@ -4,8 +4,24 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Majors that change published behaviour (definition hash, workflow replay, d.ts build) are
+    # migrated deliberately, not by bump. See the closure notes on the first bundled PR.
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: tsup
+        update-types: ['version-update:semver-major']
+      - dependency-name: zod
+        update-types: ['version-update:semver-major']
+      - dependency-name: better-auth
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@temporalio/*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
     groups:
       bun-dependencies:
+        update-types:
+          - minor
+          - patch
         patterns:
           - '*'
 
