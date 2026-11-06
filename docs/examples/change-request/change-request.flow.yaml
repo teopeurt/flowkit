@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=../../../packages/definitions/schema/flowdefinition.schema.json
+id: change-request
+version: 1
+roles: [requester, reviewer, approver]
+initialStage: draft
+initialStatus: draft
+
+stages:
+  draft:
+    pendingRole: requester
+    steady: true
+    actions:
+      submit:   { to: triage,    kind: human, policy: requesterCanSubmit }
+      withdraw: { to: withdrawn, kind: human, policy: requesterCanSubmit }
+
+  # An AI step proposes a risk level. gate: auto lets a deterministic rule release the stage;
+  # if the rule declines, throws, is missing, or the step degrades, a reviewer decides.
+  triage:
+    pendingRole: reviewer
+    sla: { after: 4h, escalate: { notify: approver } }
+    entry:
+      - { kind: system, ref: loadChangeFacts }
+      - { kind: ai, ref: assessRisk, gate: auto, decide: lowRiskAutoApprove }
+    actions:
+      auto_approve: { to: implementation, kind: system }
+      approve:      { to: implementation, kind: human, policy: reviewerDecision, guards: [reviewerClaimed] }
+      reject:
+        to: rejected
+        kind: human
+        policy: reviewerDecision
+        guards: [reviewerClaimed]
+        notify: { template: change.rejected, channels: [inbox, email] }
+
+  # An orchestrate step plans bounded subagent work, runs it in parallel, and synthesizes a result.
+  # gate: human means the output is only recorded for a person; it never moves the flow by itself.
+  implementation:
+    pendingRole: approver
+    sla: { after: 24h, escalate: { notify: approver } }
+    entry:
+      - { kind: orchestrate, ref: implementChange, gate: human }
+      - { kind: ai, ref: summarizeResult, gate: human }
+    actions:
+      signoff:
+        to: done
+        kind: human
+        policy: approverSignoff
+        notify: { template: change.accepted, channels: [inbox, email] }
+      reopen: { to: triage, kind: human, policy: approverSignoff }
+
+  done:      { final: true }
+  rejected:  { final: true }
+  withdrawn: { final: true }

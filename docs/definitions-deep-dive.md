@@ -102,22 +102,27 @@ System and AI activity inputs include `workflowId`, `ref`, `definition`, `subjec
 
 ## 4. Actions, own entries, and authorization
 
-Action kinds are exactly `human`, `system`, and `signal`. `transition()` resolves the declared action, checks kind/actor policy and guards, computes the next state, and applies status, pending-role, track, and notification effects. The explicit-null fix is in `packages/core/src/transition.ts`: destination `pendingRole` is inherited only when the action omits the field; `pendingRole: null` clears it.
+Action kinds are exactly `human`, `system`, and `signal`. `transition()` resolves the declared action, checks its policy and then each guard in order, computes the next state, and applies status, pending-role, track, and notification effects. The explicit-null fix is in `packages/core/src/transition.ts`: destination `pendingRole` is inherited only when the action omits the field; `pendingRole: null` clears it.
 
 Registry checks use own entries, not prototype lookup: `hasOwnRef`/`ownRef` in `packages/temporal/src/validation.ts` and `ownRef` in `packages/core/src/transition.ts`. The definitions CLI builds manifest sections with null-prototype objects. This keeps names such as `constructor`, `toString`, and `__proto__` from masquerading as registered refs. The old attribution to `cli.ts` is incorrect.
 
 ```mermaid
 flowchart TD
- C[command] --> O{own action entry?}
- O -- no --> E[transition error]
- O -- yes --> K{kind and actor allowed?}
- K -- no --> E
- K -- yes --> P{policy passes?}
- P -- no --> E
- P -- yes --> G{guards pass?}
- G -- no --> E
- G -- yes --> T[compute next FlowState]
- T --> N[record transition and notifications]
+  C[command] --> V[validateState: stage exists in definition]
+  V --> O{action declared on the current stage?}
+  O -- no --> E1[InvalidTransitionError]
+  O -- yes --> P{policy declared?}
+  P -- no --> G
+  P -- yes --> PR{own entry in policies registry?}
+  PR -- no --> E2[MissingPolicyError]
+  PR -- yes --> PX{policy returns true?}
+  PX -- no --> E3[AuthorizationRejectionError]
+  PX -- yes --> G{each guard, in order}
+  G --> GR{own entry in guards registry?}
+  GR -- no --> E4[MissingGuardError]
+  GR -- yes --> GX{guard returns true?}
+  GX -- no --> E5[GuardRejectionError]
+  GX -- yes --> T[compute next FlowState]
 ```
 
 ## 5. Step kinds and registries
@@ -129,7 +134,7 @@ The manifest section names in `packages/definitions/src/cli.ts` and `packages/te
 | `system` | `systemSteps` | missing `missing-system-step-ref` | `missing-step-ref` only when `validateRegistryRefs` gets a `steps` registry |
 | `ai` | `aiSteps` | missing `missing-ai-step-ref`; auto gate also checks its rule | `missing-step-ref` only through the generic core registry helper |
 | `rule` | `rules` | missing `missing-rule-ref`, unavailable action `rule-action-unavailable`, non-system action `rule-action-not-system` | not emitted by `lintFlow` |
-| `orchestrate` | `orchestrators` | missing `missing-orchestrator-ref`, empty agents `orchestrator-agents-empty`, invalid limits `orchestrator-limit-invalid`; auto gate checks rule | not emitted by `lintFlow` |
+| `orchestrate` | `orchestrators` | `missing-orchestrator-ref`, empty agents `orchestrator-agents-empty`, invalid limits `orchestrator-limit-invalid`; auto gate checks rule | not emitted by `lintFlow` |
 
 The CLI says `Skipped: declared-ref validation (policies, guards, rules, system steps, AI steps, orchestrators, templates, channels)` when no manifest is supplied. CLI validation and boot validation are distinct from core `LintIssueCode`.
 
@@ -154,23 +159,43 @@ The CLI says `Skipped: declared-ref validation (policies, guards, rules, system 
 | `missing-template-ref` | error | notification template is absent from `registry.templates` | `validateRegistryRefs` |
 | `missing-channel-ref` | error | notification channel is absent from `registry.channels` | `validateRegistryRefs` |
 
-The exact `LintIssueCode` union has 14 members: the table above contains all of them. The fabricated names `duplicate-role`, `missing-ai-ref`, `missing-notify-ref`, `missing-orchestrator-ref`, `missing-rule-ref`, `missing-stage-ref`, and `missing-system-ref` are not lint codes.
+The exact `LintIssueCode` union has 14 members: the table above contains all of them.
 
 ## 7. Gates
 
-For `gate: human`, the workflow records the step output and leaves the stage waiting. For `gate: auto`, the deciding rule receives `gatedOutput`; for an orchestrate step it also receives final task statuses. A returned allowed system action produces `gateDecision: { outcome: 'auto', action }` and a `gate:<entryEpoch>:<index>` command. A decline produces `{outcome: 'human'}`. A missing rule, thrown rule, invalid action, failed guards/policy, or degraded work does not release the stage. AI degradation is recorded as `status: degraded_to_human` and has no `gateDecision`. Orchestration failures similarly degrade to human.
+For `gate: human`, the workflow records the step output and leaves the stage waiting. For
+`gate: auto`, the deciding rule is looked up as an own entry of the `rules` registry and receives the
+gated output (`gatedOutput`); for an `orchestrate` step it also receives the final task statuses
+(`tasks`). If the rule returns an action and the automatic-transition budget allows it, the step
+records `gateDecision: { outcome: 'auto', action }` and queues the action as a **system** command
+(`actorId: 'system'`, `origin: 'rule'`). The operation id is `gate:<entryEpoch>:<index>` for an `ai`
+step and `orch:<epoch>:<index>` for an `orchestrate` step.
+
+The fail-closed branches, from `workflow.ts`:
+
+- a missing rule, a rule that throws, or a rule that returns nothing records `gateDecision: { outcome: 'human' }`;
+- a step whose work degrades (activity failure, timeout, oversized output, a stale epoch) records
+  `status: 'degraded_to_human'` and has **no** `gateDecision`;
+- when the automatic-transition budget (default 32) is exhausted, an `orchestrate` step falls back to
+  a human, but an `ai` step throws the non-retryable `FLOWKIT_AUTOMATIC_LOOP` failure.
+
+> **Not verified:** what happens when the queued action is later rejected by `transition()` (an
+> action the rule was not registered for, a failing policy or a failing guard). The interpreter
+> queues the command; this pass did not trace the rejection path after that point.
 
 ```mermaid
 flowchart TD
- S[result] --> G{gate auto?}
- G -- no --> H[record output; wait for human]
- G -- yes --> R{decide rule available?}
- R -- no --> H
- R -- yes --> X{rule returns allowed system action?}
- X -- no or throws --> H
- X -- yes --> Q{automatic cap and transition checks pass?}
- Q -- no --> H
- Q -- yes --> A[gateDecision auto; queue system command]
+  S[ai or orchestrate step runs] --> D{step completed?}
+  D -- "activity failed, timed out, output too large, or epoch went stale" --> DG["status degraded_to_human (no gateDecision)"]
+  D -- yes --> G{"gate: auto with a decide rule?"}
+  G -- "no (gate: human)" --> H[record output; the stage waits for a person]
+  G -- yes --> R["rules registry: own entry named by decide"]
+  R --> X{"rule returns an action? (missing rule, throw or no answer all mean none)"}
+  X -- no --> HD["gateDecision: outcome human"]
+  X -- yes --> C{automatic-transition budget left?}
+  C -- yes --> A["gateDecision: outcome auto; queue the action as a system command"]
+  C -- "no, ai step" --> L["FLOWKIT_AUTOMATIC_LOOP (non-retryable failure)"]
+  C -- "no, orchestrate step" --> HD
 ```
 
 ## 8. Orchestration
@@ -228,32 +253,184 @@ flowchart LR
  V --> P[published snapshot]
 ```
 
-## 10. Worked example and source map
+## 10. Worked example: a change request
 
-The following is a **schema fragment**; it is not claimed to be a full definition or registry-valid CLI fixture:
+A realistic definition that uses a human action, an `ai` step with `gate: auto`, an `orchestrate`
+step with an SLA, notifications and a reopen path. The files are checked in and validated by a test
+(`packages/definitions/test/docs-examples.test.ts`), so they cannot drift from the CLI:
+
+- [`docs/examples/change-request/change-request.flow.yaml`](./examples/change-request/change-request.flow.yaml)
+- [`docs/examples/change-request/registries.yaml`](./examples/change-request/registries.yaml) (the names the consumer registers at runtime)
 
 ```yaml
-id: change-request-demo
+# yaml-language-server: $schema=../../../packages/definitions/schema/flowdefinition.schema.json
+id: change-request
 version: 1
-roles: [requester, reviewer]
-initialStage: review
-initialStatus: pending
+roles: [requester, reviewer, approver]
+initialStage: draft
+initialStatus: draft
+
 stages:
-  review:
+  draft:
+    pendingRole: requester
+    steady: true
+    actions:
+      submit:   { to: triage,    kind: human, policy: requesterCanSubmit }
+      withdraw: { to: withdrawn, kind: human, policy: requesterCanSubmit }
+
+  # An AI step proposes a risk level. gate: auto lets a deterministic rule release the stage;
+  # if the rule declines, throws, is missing, or the step degrades, a reviewer decides.
+  triage:
     pendingRole: reviewer
-    sla: {after: 10s, escalate: {notify: reviewerReminder}}
-    entry: [{kind: ai, ref: assessRisk, gate: human}]
-    actions: {approve: {to: done, kind: human, policy: reviewer}}
-  done: {final: true}
+    sla: { after: 4h, escalate: { notify: approver } }
+    entry:
+      - { kind: system, ref: loadChangeFacts }
+      - { kind: ai, ref: assessRisk, gate: auto, decide: lowRiskAutoApprove }
+    actions:
+      auto_approve: { to: implementation, kind: system }
+      approve:      { to: implementation, kind: human, policy: reviewerDecision, guards: [reviewerClaimed] }
+      reject:
+        to: rejected
+        kind: human
+        policy: reviewerDecision
+        guards: [reviewerClaimed]
+        notify: { template: change.rejected, channels: [inbox, email] }
+
+  # An orchestrate step plans bounded subagent work, runs it in parallel, and synthesizes a result.
+  # gate: human means the output is only recorded for a person; it never moves the flow by itself.
+  implementation:
+    pendingRole: approver
+    sla: { after: 24h, escalate: { notify: approver } }
+    entry:
+      - { kind: orchestrate, ref: implementChange, gate: human }
+      - { kind: ai, ref: summarizeResult, gate: human }
+    actions:
+      signoff:
+        to: done
+        kind: human
+        policy: approverSignoff
+        notify: { template: change.accepted, channels: [inbox, email] }
+      reopen: { to: triage, kind: human, policy: approverSignoff }
+
+  done:      { final: true }
+  rejected:  { final: true }
+  withdrawn: { final: true }
 ```
 
-This block is intentionally a structural example; its refs require a manifest. CLI validation is exercised separately by the mechanical check for this task using a real fixture and the real command `bun packages/definitions/src/bin.ts definitions validate <file> --registries <manifest>`.
+The manifest the definition is checked against:
+
+```yaml
+# Names the consumer registers at runtime. Without this file the CLI skips every ref check.
+policies:
+  requesterCanSubmit: {}
+  reviewerDecision: {}
+  approverSignoff: {}
+guards:
+  reviewerClaimed: {}
+rules:
+  lowRiskAutoApprove:
+    actions: [auto_approve]      # actions this rule is allowed to fire
+systemSteps:
+  loadChangeFacts: {}
+aiSteps:
+  assessRisk: {}
+  summarizeResult: {}
+orchestrators:
+  implementChange:
+    agents: [coder, tester, reviewer-bot]
+    maxTasks: 8
+    maxConcurrency: 2
+templates:
+  change.rejected: {}
+  change.accepted: {}
+channels:
+  inbox: {}
+  email: {}
+```
+
+The state diagram below was **generated from the YAML** by a short throwaway script (it walks
+`stages`, `actions` and `entry`), not drawn by hand:
 
 ```mermaid
 stateDiagram-v2
- [*] --> review
- review --> done: approve / reviewer
- done --> [*]
+  [*] --> draft
+  draft --> triage: submit (human, requesterCanSubmit)
+  draft --> withdrawn: withdraw (human, requesterCanSubmit)
+  triage --> implementation: auto_approve (system)
+  triage --> implementation: approve (human, reviewerDecision)
+  triage --> rejected: reject (human, reviewerDecision)
+  implementation --> done: signoff (human, approverSignoff)
+  implementation --> triage: reopen (human, approverSignoff)
+  done --> [*]
+  rejected --> [*]
+  withdrawn --> [*]
+  note right of triage
+    entry: system:loadChangeFacts, ai:assessRisk/auto
+  end note
+  note right of implementation
+    entry: orchestrate:implementChange/human, ai:summarizeResult/human
+  end note
+```
+
+### Real CLI output
+
+With the manifest:
+
+```text
+1 definition file(s) valid.
+[exit 0]
+```
+
+Without it, ref checks are skipped, and a typo goes unnoticed:
+
+```text
+Skipped: declared-ref validation (policies, guards, rules, system steps, AI steps, orchestrators, templates, channels)
+1 definition file(s) valid.
+[exit 0]
+```
+
+Four deliberate mistakes, each caught with a position (`path:line:column`). The first two are
+schema-level errors (`yaml-error`) that need no manifest; the last two are ref errors that exist only
+because the manifest was supplied:
+
+**A stage transition that points nowhere**
+
+```text
+stages.triage.actions.auto_approve.to:25:27 yaml-error Action "triage.auto_approve" targets unknown stage "implementaton".
+1 issue(s) across 1 file(s).
+[exit 1]
+```
+
+**`gate: auto` without a `decide` rule**
+
+```text
+stages.triage.entry.1.decide:23:9 yaml-error Step "assessRisk" with gate "auto" must name a deciding rule in "decide".
+1 issue(s) across 1 file(s).
+[exit 1]
+```
+
+**A decide rule that is not registered**
+
+```text
+stages.triage.entry.1.decide:23:58 missing-rule-ref Missing rule ref "nopeRule".
+1 issue(s) across 1 file(s).
+[exit 1]
+```
+
+**A policy name typo**
+
+```text
+stages.triage.actions.approve.policy:26:64 missing-policy-ref Missing policy ref "reviewerDecison".
+1 issue(s) across 1 file(s).
+[exit 1]
+```
+
+The same policy typo **without** the manifest passes:
+
+```text
+Skipped: declared-ref validation (policies, guards, rules, system steps, AI steps, orchestrators, templates, channels)
+1 definition file(s) valid.
+[exit 0]
 ```
 
 ### Source map

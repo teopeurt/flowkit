@@ -1,0 +1,26 @@
+# Names the consumer registers at runtime. Without this file the CLI skips every ref check.
+policies:
+  requesterCanSubmit: {}
+  reviewerDecision: {}
+  approverSignoff: {}
+guards:
+  reviewerClaimed: {}
+rules:
+  lowRiskAutoApprove:
+    actions: [auto_approve]      # actions this rule is allowed to fire
+systemSteps:
+  loadChangeFacts: {}
+aiSteps:
+  assessRisk: {}
+  summarizeResult: {}
+orchestrators:
+  implementChange:
+    agents: [coder, tester, reviewer-bot]
+    maxTasks: 8
+    maxConcurrency: 2
+templates:
+  change.rejected: {}
+  change.accepted: {}
+channels:
+  inbox: {}
+  email: {}
