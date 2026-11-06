@@ -1,4 +1,4 @@
-# @naakwu/flowkit-consumer
+# @teopeurt/flowkit-consumer
 
 ## 1.1.0
 
@@ -15,8 +15,8 @@
 ### Patch Changes
 
 - Updated dependencies [51dcb7c]
-  - @naakwu/flowkit-core@1.1.0
-  - @naakwu/flowkit-tasks@1.1.0
+  - @teopeurt/flowkit-core@1.1.0
+  - @teopeurt/flowkit-tasks@1.1.0
 
 ## 1.0.0
 

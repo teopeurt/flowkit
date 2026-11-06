@@ -22,12 +22,12 @@ if [[ ! -d "$demo_checkout" || ! -r "$demo_checkout/package.json" ]]; then
 fi
 
 package_names=(
-  "@naakwu/flowkit-auth"
-  "@naakwu/flowkit-consumer"
-  "@naakwu/flowkit-core"
-  "@naakwu/flowkit-notify"
-  "@naakwu/flowkit-tasks"
-  "@naakwu/flowkit-temporal"
+  "@teopeurt/flowkit-auth"
+  "@teopeurt/flowkit-consumer"
+  "@teopeurt/flowkit-core"
+  "@teopeurt/flowkit-notify"
+  "@teopeurt/flowkit-tasks"
+  "@teopeurt/flowkit-temporal"
 )
 tarballs=()
 

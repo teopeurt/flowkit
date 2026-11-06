@@ -2,7 +2,7 @@
 
 **Status:** APPROVED, v1.0. Implemented; see §15 for where the implementation clarifies or departs from the text above.
 **Depends on:** Spec A, auto-gated AI steps (`gate: auto` + `decide`), `2026-11-06-auto-gated-ai-steps.md`.
-**Target:** `@naakwu/flowkit-core`, `-temporal`, `-consumer`, `-definitions`. Baseline: `main` at `df8a8fc` (all packages 1.0.0).
+**Target:** `@teopeurt/flowkit-core`, `-temporal`, `-consumer`, `-definitions`. Baseline: `main` at `df8a8fc` (all packages 1.0.0).
 
 ---
 
@@ -81,7 +81,7 @@ No other fields. Limits and timeouts are *registration* data (§5), not definiti
 
 ### 5.1 Registration (boot-validated)
 
-```ts
+```text
 orchestrators: {
   buildFeature: {
     agents: ['planner', 'coder', 'tester'],   // finite set the plan may name
@@ -96,7 +96,7 @@ orchestrators: {
 
 ### 5.2 Activities (a separate optional interface, so existing consumers do not break)
 
-```ts
+```text
 interface FlowkitOrchestrationActivities {
   planOrchestration(i: PlanOrchestrationInput): Promise<{ tasks: OrchestrationTask[] }>;
   runSubagent(i: RunSubagentInput): Promise<{ output?: unknown; outputRef?: string }>;

@@ -28,12 +28,12 @@ cat > "$demo_checkout/package.json" <<'JSON'
     "stack:ci": "node fake-demo-command.mjs stack:ci"
   },
   "dependencies": {
-    "@naakwu/flowkit-auth": "0.2.0",
-    "@naakwu/flowkit-consumer": "0.2.0",
-    "@naakwu/flowkit-core": "0.2.0",
-    "@naakwu/flowkit-notify": "0.2.0",
-    "@naakwu/flowkit-tasks": "0.2.0",
-    "@naakwu/flowkit-temporal": "0.2.0",
+    "@teopeurt/flowkit-auth": "0.2.0",
+    "@teopeurt/flowkit-consumer": "0.2.0",
+    "@teopeurt/flowkit-core": "0.2.0",
+    "@teopeurt/flowkit-notify": "0.2.0",
+    "@teopeurt/flowkit-tasks": "0.2.0",
+    "@teopeurt/flowkit-temporal": "0.2.0",
     "zod": "3.25.76"
   }
 }
@@ -47,12 +47,12 @@ cat > "$demo_checkout/bun.lock" <<'JSON'
     "": {
       "name": "fake-flowkit-demo",
       "dependencies": {
-        "@naakwu/flowkit-auth": "0.2.0",
-        "@naakwu/flowkit-consumer": "0.2.0",
-        "@naakwu/flowkit-core": "0.2.0",
-        "@naakwu/flowkit-notify": "0.2.0",
-        "@naakwu/flowkit-tasks": "0.2.0",
-        "@naakwu/flowkit-temporal": "0.2.0",
+        "@teopeurt/flowkit-auth": "0.2.0",
+        "@teopeurt/flowkit-consumer": "0.2.0",
+        "@teopeurt/flowkit-core": "0.2.0",
+        "@teopeurt/flowkit-notify": "0.2.0",
+        "@teopeurt/flowkit-tasks": "0.2.0",
+        "@teopeurt/flowkit-temporal": "0.2.0",
         "zod": "3.25.76"
       }
     }
@@ -76,17 +76,17 @@ cp "$demo_checkout/fake-demo-command.mjs" "$test_root/original-fake-demo-command
 tar -cf "$test_root/original-demo.tar" -C "$demo_checkout" .
 
 package_names=(
-  "@naakwu/flowkit-auth"
-  "@naakwu/flowkit-consumer"
-  "@naakwu/flowkit-core"
-  "@naakwu/flowkit-notify"
-  "@naakwu/flowkit-tasks"
-  "@naakwu/flowkit-temporal"
+  "@teopeurt/flowkit-auth"
+  "@teopeurt/flowkit-consumer"
+  "@teopeurt/flowkit-core"
+  "@teopeurt/flowkit-notify"
+  "@teopeurt/flowkit-tasks"
+  "@teopeurt/flowkit-temporal"
 )
 tarballs=()
 
 for package_name in "${package_names[@]}"; do
-  package_slug="${package_name#@naakwu/}"
+  package_slug="${package_name#@teopeurt/}"
   tarball="$test_root/${package_slug}-candidate.tgz"
   cat > "$package_stage/package/package.json" <<JSON
 {"name":"$package_name","version":"0.2.0","main":"index.js"}
@@ -106,22 +106,22 @@ node - "${tarballs[@]}" "$capture_directory/typecheck.package.json" <<'JS'
 import { readFileSync, realpathSync } from "node:fs";
 
 const packageNames = [
-  "@naakwu/flowkit-auth",
-  "@naakwu/flowkit-consumer",
-  "@naakwu/flowkit-core",
-  "@naakwu/flowkit-notify",
-  "@naakwu/flowkit-tasks",
-  "@naakwu/flowkit-temporal",
+  "@teopeurt/flowkit-auth",
+  "@teopeurt/flowkit-consumer",
+  "@teopeurt/flowkit-core",
+  "@teopeurt/flowkit-notify",
+  "@teopeurt/flowkit-tasks",
+  "@teopeurt/flowkit-temporal",
 ];
 const tarballs = process.argv.slice(2, 8).map((tarball) => realpathSync(tarball));
 const capturedManifest = JSON.parse(readFileSync(process.argv[8], "utf8"));
 const expectedCandidates = {
-  "@naakwu/flowkit-auth": `file:${tarballs[0]}`,
-  "@naakwu/flowkit-consumer": `file:${tarballs[1]}`,
-  "@naakwu/flowkit-core": `file:${tarballs[2]}`,
-  "@naakwu/flowkit-notify": `file:${tarballs[3]}`,
-  "@naakwu/flowkit-tasks": `file:${tarballs[4]}`,
-  "@naakwu/flowkit-temporal": `file:${tarballs[5]}`,
+  "@teopeurt/flowkit-auth": `file:${tarballs[0]}`,
+  "@teopeurt/flowkit-consumer": `file:${tarballs[1]}`,
+  "@teopeurt/flowkit-core": `file:${tarballs[2]}`,
+  "@teopeurt/flowkit-notify": `file:${tarballs[3]}`,
+  "@teopeurt/flowkit-tasks": `file:${tarballs[4]}`,
+  "@teopeurt/flowkit-temporal": `file:${tarballs[5]}`,
 };
 
 for (const packageName of packageNames) {

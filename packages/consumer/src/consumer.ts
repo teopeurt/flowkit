@@ -1,4 +1,4 @@
-import { claimTask, type FlowTask } from '@naakwu/flowkit-tasks';
+import { claimTask, type FlowTask } from '@teopeurt/flowkit-tasks';
 
 import type {
   ConsumerDependencies,

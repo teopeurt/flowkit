@@ -1,4 +1,4 @@
-# @naakwu/flowkit-notify
+# @teopeurt/flowkit-notify
 
 ## 1.1.0
 

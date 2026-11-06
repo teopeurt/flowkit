@@ -1,3 +1,16 @@
+> **Package scope migration:** Versions through 1.0.0 were published as `@naakwu/*`. From 1.1.0 onward, install and import the same API as `@teopeurt/*`.
+
+## GitHub Packages
+
+The packages are public on GitHub Packages. Configure the scope registry and authenticate with a GitHub token that has `read:packages`:
+
+```ini
+@teopeurt:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+Consumers upgrading from 1.0.0 must rename `@naakwu/flowkit-*` imports and dependencies to `@teopeurt/flowkit-*`; the API is unchanged.
+
 # FlowKit
 
 FlowKit is a set of TypeScript packages for defining, running, projecting, and integrating durable flows.
@@ -6,13 +19,13 @@ This repository is Apache-2.0 licensed source. During Phase 2, packages install 
 ## Packages
 
 ```text
-@naakwu/flowkit-core       definition and transition kernel
-├── @naakwu/flowkit-definitions   definition authoring format (YAML) and JSON Schema
-├── @naakwu/flowkit-tasks     task projections and claims
-│   └── @naakwu/flowkit-consumer  consumer integration contracts (also uses core)
-└── @naakwu/flowkit-temporal  Temporal runtime (uses core and consumer)
-@naakwu/flowkit-notify     notification planning and delivery contracts
-@naakwu/flowkit-auth       authentication and authorization contracts
+@teopeurt/flowkit-core       definition and transition kernel
+├── @teopeurt/flowkit-definitions   definition authoring format (YAML) and JSON Schema
+├── @teopeurt/flowkit-tasks     task projections and claims
+│   └── @teopeurt/flowkit-consumer  consumer integration contracts (also uses core)
+└── @teopeurt/flowkit-temporal  Temporal runtime (uses core and consumer)
+@teopeurt/flowkit-notify     notification planning and delivery contracts
+@teopeurt/flowkit-auth       authentication and authorization contracts
 ```
 
 See [package contracts](docs/package-contracts.md) and the [architecture](docs/architecture.md) for the supported entry points and boundaries.
@@ -24,23 +37,23 @@ You need a GitHub Packages token with `read:packages` and access to the private 
 For npm, pnpm, Bun, and Yarn Classic, copy [`.npmrc.example`](.npmrc.example) to your user-level or project-level npm configuration, set `GITHUB_PACKAGES_TOKEN` in your shell or CI secret store, then install:
 
 ```sh
-npm install @naakwu/flowkit-core
-pnpm add @naakwu/flowkit-core
-yarn add @naakwu/flowkit-core
-bun add @naakwu/flowkit-core
+npm install @teopeurt/flowkit-core
+pnpm add @teopeurt/flowkit-core
+yarn add @teopeurt/flowkit-core
+bun add @teopeurt/flowkit-core
 ```
 
 For Yarn Berry (v2+), configure the scope in `.yarnrc.yml` instead of relying on `.npmrc`:
 
 ```yml
 npmScopes:
-  naakwu:
+  teopeurt:
     npmRegistryServer: "https://npm.pkg.github.com"
     npmAlwaysAuth: true
     npmAuthToken: "${GITHUB_PACKAGES_TOKEN}"
 ```
 
-Then run `yarn add @naakwu/flowkit-core`. Keep the token in your shell, CI secret store, or Yarn-supported environment configuration; do not commit it.
+Then run `yarn add @teopeurt/flowkit-core`. Keep the token in your shell, CI secret store, or Yarn-supported environment configuration; do not commit it.
 
 ## Develop locally
 

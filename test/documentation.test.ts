@@ -70,7 +70,7 @@ describe('public documentation contract', () => {
 
     expect(license).toContain('Apache License');
     expect(license).toContain('Version 2.0, January 2004');
-    expect(npmrc).toContain('@naakwu:registry=https://npm.pkg.github.com');
+    expect(npmrc).toContain('@teopeurt:registry=https://npm.pkg.github.com');
     expect(npmrc).toContain('${GITHUB_PACKAGES_TOKEN}');
     for (const document of documents) expect(document).not.toMatch(tokenPattern);
   });
@@ -90,7 +90,7 @@ describe('public documentation contract', () => {
     const rootReadme = await readDocumentation('README.md');
     expect(rootReadme).toContain('Yarn Berry');
     expect(rootReadme).toContain('npmScopes:');
-    expect(rootReadme).toContain('naakwu:');
+    expect(rootReadme).toContain('teopeurt:');
     expect(rootReadme).toContain('npmRegistryServer: "https://npm.pkg.github.com"');
     expect(rootReadme).toContain('npmAuthToken: "${GITHUB_PACKAGES_TOKEN}"');
   });
@@ -104,7 +104,7 @@ describe('public documentation contract', () => {
         name: string;
         dependencies?: Record<string, string>;
       };
-      for (const dependency of Object.keys(manifest.dependencies ?? {}).filter((name) => name.startsWith('@naakwu/flowkit-'))) {
+      for (const dependency of Object.keys(manifest.dependencies ?? {}).filter((name) => name.startsWith('@teopeurt/flowkit-'))) {
         expect(renderedGraph).toContain(`${dependency} → ${manifest.name}`);
       }
     }
@@ -122,10 +122,10 @@ describe('public documentation contract', () => {
       name: 'flowkit-documentation-consumer', private: true, type: 'module', dependencies, overrides: dependencies,
     }, null, 2));
     await run(['bun', 'install', '--offline', '--ignore-scripts'], directory);
-    await writeFile(join(directory, 'quickstart.ts'), quickstarts.join('\n\n'));
+    await Promise.all(quickstarts.map((source, index) => writeFile(join(directory, `quickstart-${index}.ts`), source)));
     await writeFile(join(directory, 'tsconfig.json'), JSON.stringify({
       compilerOptions: { target: 'ES2022', module: 'ESNext', moduleResolution: 'bundler', strict: true, noEmit: true, skipLibCheck: true },
-      files: ['quickstart.ts'],
+      include: ['quickstart-*.ts'],
     }));
     await run(['bun', 'x', '--offline', 'tsc', '--project', 'tsconfig.json'], directory);
   }, 60_000);

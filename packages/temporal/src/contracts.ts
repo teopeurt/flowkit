@@ -6,7 +6,7 @@ import type {
   FlowState,
   GuardRegistry,
   TransitionRecord,
-} from '@naakwu/flowkit-core';
+} from '@teopeurt/flowkit-core';
 
 /**
  * Data contracts shared between Flowkit consumers (workers, services) and the

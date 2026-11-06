@@ -1,9 +1,11 @@
-# `@naakwu/flowkit-core`
+> Versions through 1.0.0 used `@naakwu/*`; from 1.1.0 use the public `@teopeurt/*` package with the same API.
 
-The pure workflow-definition and transition kernel. Its only public entry point is `@naakwu/flowkit-core`.
+# `@teopeurt/flowkit-core`
+
+The pure workflow-definition and transition kernel. Its only public entry point is `@teopeurt/flowkit-core`.
 
 ```ts
-import { buildInitialState, defineFlow, transition } from '@naakwu/flowkit-core';
+import { buildInitialState, defineFlow, transition } from '@teopeurt/flowkit-core';
 
 const flow = defineFlow({
   id: 'review', version: 1, roles: ['author'], initialStage: 'draft',

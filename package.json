@@ -1,5 +1,5 @@
 {
-  "name": "@naakwu/flowkit-workspace",
+  "name": "@teopeurt/flowkit-workspace",
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {

@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   noExternal: ['@noble/hashes', 'zod'],
-  external: ['@naakwu/flowkit-core'],
+  external: ['@teopeurt/flowkit-core'],
 });

@@ -1,13 +1,13 @@
 import { checkLockstepVersions } from "./check-lockstep-versions";
 
 export const flowKitPackages = [
-  "@naakwu/flowkit-auth",
-  "@naakwu/flowkit-consumer",
-  "@naakwu/flowkit-core",
-  "@naakwu/flowkit-definitions",
-  "@naakwu/flowkit-notify",
-  "@naakwu/flowkit-tasks",
-  "@naakwu/flowkit-temporal",
+  "@teopeurt/flowkit-auth",
+  "@teopeurt/flowkit-consumer",
+  "@teopeurt/flowkit-core",
+  "@teopeurt/flowkit-definitions",
+  "@teopeurt/flowkit-notify",
+  "@teopeurt/flowkit-tasks",
+  "@teopeurt/flowkit-temporal",
 ] as const;
 
 const initialReleaseVersion = "1.0.0";

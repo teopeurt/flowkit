@@ -1,7 +1,9 @@
-# @naakwu/flowkit-definitions
+> Versions through 1.0.0 used `@naakwu/*`; from 1.1.0 use the public `@teopeurt/*` package with the same API.
+
+# @teopeurt/flowkit-definitions
 
 Authoring surface for Flowkit workflow definitions. The definition model itself lives in
-`@naakwu/flowkit-core`; this package owns how a definition is written down and how it is checked
+`@teopeurt/flowkit-core`; this package owns how a definition is written down and how it is checked
 before it reaches a worker bundle.
 
 ## What ships
@@ -26,7 +28,7 @@ schema cannot silently drift from the definition model.
 ## Loading a definition
 
 ```ts
-import { parseFlowYaml, loadFlowFile, FlowDefinitionYamlError } from '@naakwu/flowkit-definitions';
+import { parseFlowYaml, loadFlowFile, FlowDefinitionYamlError } from '@teopeurt/flowkit-definitions';
 
 {
   const source = `id: leave-approval
@@ -159,7 +161,7 @@ that looks numeric or boolean must be quoted (`policies: { "010": {} }`); an emp
 Point an editor at the schema through a YAML language-server comment:
 
 ```yaml
-# yaml-language-server: $schema=./node_modules/@naakwu/flowkit-definitions/schema/flowdefinition.schema.json
+# yaml-language-server: $schema=./node_modules/@teopeurt/flowkit-definitions/schema/flowdefinition.schema.json
 id: leave-approval
 version: 1
 roles: [employee, manager]
@@ -188,5 +190,5 @@ types, and wrong enum values. The loader enforces them too, since it ends in `fl
 
 ## Depends on
 
-- `@naakwu/flowkit-core` — the definition model and `flowSchema`.
-- `@naakwu/flowkit-temporal` — `publishDefinition` and `validateFlowkit`, used by the CLI.
+- `@teopeurt/flowkit-core` — the definition model and `flowSchema`.
+- `@teopeurt/flowkit-temporal` — `publishDefinition` and `validateFlowkit`, used by the CLI.

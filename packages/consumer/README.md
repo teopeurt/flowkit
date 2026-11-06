@@ -1,9 +1,11 @@
-# `@naakwu/flowkit-consumer`
+> Versions through 1.0.0 used `@naakwu/*`; from 1.1.0 use the public `@teopeurt/*` package with the same API.
 
-Consumer integration contracts and `createFlowkitConsumer`, exported from `@naakwu/flowkit-consumer`.
+# `@teopeurt/flowkit-consumer`
+
+Consumer integration contracts and `createFlowkitConsumer`, exported from `@teopeurt/flowkit-consumer`.
 
 ```ts
-import { createFlowkitConsumer } from '@naakwu/flowkit-consumer';
+import { createFlowkitConsumer } from '@teopeurt/flowkit-consumer';
 
 const createConsumer = createFlowkitConsumer;
 ```

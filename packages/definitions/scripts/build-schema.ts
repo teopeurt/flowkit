@@ -1,4 +1,4 @@
-import { flowSchema } from '@naakwu/flowkit-core';
+import { flowSchema } from '@teopeurt/flowkit-core';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 /**
@@ -40,7 +40,7 @@ export function buildFlowDefinitionSchema(): Record<string, unknown> {
     $schema: FLOW_DEFINITION_SCHEMA_DRAFT,
     title: 'FlowDefinition',
     description:
-      'A Flowkit workflow definition as authored in YAML or JSON. Generated from @naakwu/flowkit-core flowSchema; do not edit by hand.',
+      'A Flowkit workflow definition as authored in YAML or JSON. Generated from @teopeurt/flowkit-core flowSchema; do not edit by hand.',
     ...body,
   };
 }

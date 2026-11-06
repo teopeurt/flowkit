@@ -2,8 +2,8 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 
-import { flowSchema } from '@naakwu/flowkit-core';
-import type { FlowDefinition } from '@naakwu/flowkit-core';
+import { flowSchema } from '@teopeurt/flowkit-core';
+import type { FlowDefinition } from '@teopeurt/flowkit-core';
 import {
   isAlias,
   isMap,

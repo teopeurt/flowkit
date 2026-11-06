@@ -2,7 +2,7 @@
 
 **Status:** APPROVED, v1.0. Implemented.
 **Implementation:** `packages/core`, `-temporal`, `-consumer`, `-definitions`; tests alongside. Written before this spec was approved, then approved unchanged.
-**Targets:** `@naakwu/flowkit-core`, `-temporal`, `-consumer`, `-definitions`.
+**Targets:** `@teopeurt/flowkit-core`, `-temporal`, `-consumer`, `-definitions`.
 **Required by:** Spec B (`orchestrate` step), which reuses `gate`, `decide`, and `gateDecision` unchanged.
 
 ---

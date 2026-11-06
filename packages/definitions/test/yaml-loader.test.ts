@@ -4,9 +4,9 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { defineFlow } from '@naakwu/flowkit-core';
-import type { FlowDefinition } from '@naakwu/flowkit-core';
-import { publishDefinition } from '@naakwu/flowkit-temporal';
+import { defineFlow } from '@teopeurt/flowkit-core';
+import type { FlowDefinition } from '@teopeurt/flowkit-core';
+import { publishDefinition } from '@teopeurt/flowkit-temporal';
 
 import {
   FlowDefinitionFileError,

@@ -1,9 +1,11 @@
-# `@naakwu/flowkit-tasks`
+> Versions through 1.0.0 used `@naakwu/*`; from 1.1.0 use the public `@teopeurt/*` package with the same API.
 
-Human-task projection, claiming, inbox, invitation, and testing contracts, exposed from `@naakwu/flowkit-tasks`.
+# `@teopeurt/flowkit-tasks`
+
+Human-task projection, claiming, inbox, invitation, and testing contracts, exposed from `@teopeurt/flowkit-tasks`.
 
 ```ts
-import { MemoryTaskStore, planTaskProjection } from '@naakwu/flowkit-tasks';
+import { MemoryTaskStore, planTaskProjection } from '@teopeurt/flowkit-tasks';
 
 const store = new MemoryTaskStore();
 const project = planTaskProjection;

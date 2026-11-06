@@ -3,13 +3,13 @@ import { describe, expect, test } from "bun:test";
 import { validateReleasePlan } from "./validate-release-plan";
 
 const packageNames = [
-  "@naakwu/flowkit-auth",
-  "@naakwu/flowkit-consumer",
-  "@naakwu/flowkit-core",
-  "@naakwu/flowkit-definitions",
-  "@naakwu/flowkit-notify",
-  "@naakwu/flowkit-tasks",
-  "@naakwu/flowkit-temporal",
+  "@teopeurt/flowkit-auth",
+  "@teopeurt/flowkit-consumer",
+  "@teopeurt/flowkit-core",
+  "@teopeurt/flowkit-definitions",
+  "@teopeurt/flowkit-notify",
+  "@teopeurt/flowkit-tasks",
+  "@teopeurt/flowkit-temporal",
 ];
 
 const planWith = (releases: Array<{ name: string; version: string }>) => ({
@@ -35,7 +35,7 @@ describe("validateReleasePlan", () => {
       validateReleasePlan(
         planWith(
           packageNames
-            .filter((name) => name !== "@naakwu/flowkit-definitions")
+            .filter((name) => name !== "@teopeurt/flowkit-definitions")
             .map((name) => ({ name, version: "1.0.0" })),
         ),
       ),
@@ -62,7 +62,7 @@ describe("validateReleasePlan", () => {
       validateReleasePlan(
         planWith([
           ...packageNames.map((name) => ({ name, version: "1.0.0" })),
-          { name: "@naakwu/flowkit-unknown", version: "1.0.0" },
+          { name: "@teopeurt/flowkit-unknown", version: "1.0.0" },
         ]),
       ),
     ).toThrow("must include exactly the seven FlowKit packages");

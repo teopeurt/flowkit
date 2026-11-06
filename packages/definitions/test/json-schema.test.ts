@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 import Ajv, { type ValidateFunction } from 'ajv';
-import { defineFlow, FlowDefinitionError, flowSchema } from '@naakwu/flowkit-core';
+import { defineFlow, FlowDefinitionError, flowSchema } from '@teopeurt/flowkit-core';
 
 import { docReviewFlow } from '../../core/src/testing/doc-review.fixture';
 import { serializeFlowDefinitionSchema } from '../scripts/build-schema';

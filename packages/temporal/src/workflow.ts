@@ -18,8 +18,8 @@ import {
   getActionDefinition,
   getDeclaredActions,
   transition,
-} from '@naakwu/flowkit-core';
-import type { FlowCommand, FlowState, NotificationBinding, StepDef } from '@naakwu/flowkit-core';
+} from '@teopeurt/flowkit-core';
+import type { FlowCommand, FlowState, NotificationBinding, StepDef } from '@teopeurt/flowkit-core';
 
 import { FLOWKIT_ORCHESTRATION_DEFAULTS, FLOWKIT_ORCHESTRATION_HARD_LIMIT } from './contracts';
 import type {
@@ -37,7 +37,7 @@ import type {
   FlowkitWorkflowInput,
   EntryReason,
 } from './contracts';
-import type { TransitionRecord } from '@naakwu/flowkit-core';
+import type { TransitionRecord } from '@teopeurt/flowkit-core';
 import { verifyPublishedDefinition } from './snapshot';
 import { parseSlaDuration } from './validation';
 

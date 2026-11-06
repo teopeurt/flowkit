@@ -1,4 +1,4 @@
-# @naakwu/flowkit-auth
+# @teopeurt/flowkit-auth
 
 ## 1.1.0
 

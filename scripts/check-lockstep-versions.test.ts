@@ -13,37 +13,37 @@ import { FLOWKIT_TEMPORAL_VERSION } from '../packages/temporal/src';
 
 const publicVersionContracts = [
   {
-    name: '@naakwu/flowkit-auth',
+    name: '@teopeurt/flowkit-auth',
     manifestPath: '../packages/auth/package.json',
     exports: [FLOWKIT_AUTH_VERSION, testingContractVersion],
   },
   {
-    name: '@naakwu/flowkit-core',
+    name: '@teopeurt/flowkit-core',
     manifestPath: '../packages/core/package.json',
     exports: [FLOWKIT_CORE_VERSION],
   },
   {
-    name: '@naakwu/flowkit-consumer',
+    name: '@teopeurt/flowkit-consumer',
     manifestPath: '../packages/consumer/package.json',
     exports: [FLOWKIT_CONSUMER_VERSION],
   },
   {
-    name: '@naakwu/flowkit-definitions',
+    name: '@teopeurt/flowkit-definitions',
     manifestPath: '../packages/definitions/package.json',
     exports: [FLOWKIT_DEFINITIONS_VERSION],
   },
   {
-    name: '@naakwu/flowkit-notify',
+    name: '@teopeurt/flowkit-notify',
     manifestPath: '../packages/notify/package.json',
     exports: [FLOWKIT_NOTIFY_VERSION],
   },
   {
-    name: '@naakwu/flowkit-tasks',
+    name: '@teopeurt/flowkit-tasks',
     manifestPath: '../packages/tasks/package.json',
     exports: [FLOWKIT_TASKS_VERSION],
   },
   {
-    name: '@naakwu/flowkit-temporal',
+    name: '@teopeurt/flowkit-temporal',
     manifestPath: '../packages/temporal/package.json',
     exports: [FLOWKIT_TEMPORAL_VERSION],
   },
@@ -53,13 +53,13 @@ describe('checkLockstepVersions', () => {
   test('returns the shared version when all seven package versions match', () => {
     expect(
       checkLockstepVersions([
-        { name: '@naakwu/flowkit-core', version: '1.0.0' },
-        { name: '@naakwu/flowkit-auth', version: '1.0.0' },
-        { name: '@naakwu/flowkit-consumer', version: '1.0.0' },
-        { name: '@naakwu/flowkit-definitions', version: '1.0.0' },
-        { name: '@naakwu/flowkit-notify', version: '1.0.0' },
-        { name: '@naakwu/flowkit-tasks', version: '1.0.0' },
-        { name: '@naakwu/flowkit-temporal', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-core', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-auth', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-consumer', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-definitions', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-notify', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-tasks', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-temporal', version: '1.0.0' },
       ]),
     ).toBe('1.0.0');
   });
@@ -67,9 +67,9 @@ describe('checkLockstepVersions', () => {
   test('reports every package whose version differs from the first package', () => {
     expect(() =>
       checkLockstepVersions([
-        { name: '@naakwu/flowkit-core', version: '0.2.0' },
-        { name: '@naakwu/flowkit-auth', version: '0.2.1' },
-        { name: '@naakwu/flowkit-consumer', version: '0.3.0' },
+        { name: '@teopeurt/flowkit-core', version: '0.2.0' },
+        { name: '@teopeurt/flowkit-auth', version: '0.2.1' },
+        { name: '@teopeurt/flowkit-consumer', version: '0.3.0' },
       ]),
     ).toThrow(/flowkit-auth.*0\.2\.1[\s\S]*flowkit-consumer.*0\.3\.0/);
   });
