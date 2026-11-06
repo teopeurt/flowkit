@@ -1,5 +1,5 @@
-import type { FlowDefinition, FlowState } from '@naakwu/flowkit-core';
-import type { FlowTask, TaskEligibilityResolver, TaskInboxPage, TaskStore } from '@naakwu/flowkit-tasks';
+import type { FlowDefinition, FlowState } from '@teopeurt/flowkit-core';
+import type { FlowTask, TaskEligibilityResolver, TaskInboxPage, TaskStore } from '@teopeurt/flowkit-tasks';
 
 export type DefinitionHash = `sha256:${string}`;
 

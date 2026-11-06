@@ -1,5 +1,5 @@
-import { flowSchema, getActionDefinition, lintInterpreterFlow } from '@naakwu/flowkit-core';
-import type { ActionDef, FlowDefinition, NotificationBinding } from '@naakwu/flowkit-core';
+import { flowSchema, getActionDefinition, lintInterpreterFlow } from '@teopeurt/flowkit-core';
+import type { ActionDef, FlowDefinition, NotificationBinding } from '@teopeurt/flowkit-core';
 
 import { FLOWKIT_ORCHESTRATION_HARD_LIMIT } from './contracts';
 import type {

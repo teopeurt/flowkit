@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import type { FlowDefinition } from '@naakwu/flowkit-core';
+import type { FlowDefinition } from '@teopeurt/flowkit-core';
 
 import type { PublishedFlowDefinition } from './contracts';
 import { canonicalizeJson, hashCanonicalJson, publishDefinition } from './snapshot';

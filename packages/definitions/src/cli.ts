@@ -26,8 +26,8 @@ import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { LineCounter, isMap, isScalar, parseDocument } from 'yaml';
 
-import { publishDefinition, validateFlowkit } from '@naakwu/flowkit-temporal';
-import type { FlowkitValidationIssue, FlowkitValidationRegistries } from '@naakwu/flowkit-temporal';
+import { publishDefinition, validateFlowkit } from '@teopeurt/flowkit-temporal';
+import type { FlowkitValidationIssue, FlowkitValidationRegistries } from '@teopeurt/flowkit-temporal';
 
 import { FlowDefinitionYamlError, locateYamlPath, parseYamlWithStructure, splitYamlPath } from './yaml';
 import type { ParsedFlowYaml } from './yaml';

@@ -1,4 +1,4 @@
-# @naakwu/flowkit-temporal
+# @teopeurt/flowkit-temporal
 
 ## 1.0.0
 

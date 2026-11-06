@@ -3,7 +3,7 @@
 **Status:** format specification. See [Tooling status](#8-tooling-status) for the implementation that
 enforces it in this checkout.
 
-A Flowkit definition is data: `@naakwu/flowkit-core` validates it with a Zod schema and a generic
+A Flowkit definition is data: `@teopeurt/flowkit-core` validates it with a Zod schema and a generic
 interpreter executes any definition it accepts. The TypeScript form (`defineFlow({...})`) is one way
 to write that data. This document specifies the YAML form — the same document, written in a file
 instead of a module, so it can be edited without a build.
@@ -227,8 +227,8 @@ row states what is enforced, not what is advisable.
 | YAML loader (`parseFlowYaml` / `loadFlowFile`) | Everything listed in §1: document count, key and tag rules, the version spelling, the byte cap, the alias limit, then everything `flowSchema` rejects. | Anything needing a consumer registry, and the graph checks below. |
 | JSON Schema (`schema/flowdefinition.schema.json`) | Unknown fields, wrong types, wrong enum values, missing top-level keys. Usable from any editor or CI step. | Anything requiring cross-field logic; see below. |
 | `defineFlow` (Zod `flowSchema`) | Everything the schema catches, plus refinements such as "an AI step must declare `gate` (`human` or `auto`), `gate: auto` requires `decide` and `decide` requires `gate: auto`, and only AI steps may declare a gate". | Whether `ref`s, policies, guards, templates, and channels actually resolve. |
-| `lintFlow` / `lintInterpreterFlow` (`@naakwu/flowkit-core`) | Graph and wiring problems: unreachable stages, dead ends, actions on final stages, human actions without a policy, stages with no SLA, rule, or steady marker. | Whether a referenced name exists in a consumer registry. |
-| `validateFlowkit` (`@naakwu/flowkit-temporal`) | Everything above plus declared-ref validation against consumer registries, and SLA duration syntax. This is the boot gate a worker should run before accepting work. | Runtime behaviour of the resolved handlers. |
+| `lintFlow` / `lintInterpreterFlow` (`@teopeurt/flowkit-core`) | Graph and wiring problems: unreachable stages, dead ends, actions on final stages, human actions without a policy, stages with no SLA, rule, or steady marker. | Whether a referenced name exists in a consumer registry. |
+| `validateFlowkit` (`@teopeurt/flowkit-temporal`) | Everything above plus declared-ref validation against consumer registries, and SLA duration syntax. This is the boot gate a worker should run before accepting work. | Runtime behaviour of the resolved handlers. |
 
 A definition is only "valid" in the full sense when it passes every layer.
 
@@ -265,9 +265,9 @@ filesystem, and reading mutable definition data during replay would break determ
 
 | Tool | Status in this checkout |
 | --- | --- |
-| JSON Schema emission (`schema/flowdefinition.schema.json`) | Implemented in `@naakwu/flowkit-definitions`; regeneration is checked by `packages/definitions/test/json-schema.test.ts`. |
-| `parseFlowYaml(source)` / `loadFlowFile(path)` | Implemented and exported by `@naakwu/flowkit-definitions`. |
-| `flowkit definitions validate` CLI | Implemented as the `flowkit` bin of `@naakwu/flowkit-definitions`. |
+| JSON Schema emission (`schema/flowdefinition.schema.json`) | Implemented in `@teopeurt/flowkit-definitions`; regeneration is checked by `packages/definitions/test/json-schema.test.ts`. |
+| `parseFlowYaml(source)` / `loadFlowFile(path)` | Implemented and exported by `@teopeurt/flowkit-definitions`. |
+| `flowkit definitions validate` CLI | Implemented as the `flowkit` bin of `@teopeurt/flowkit-definitions`. |
 | Draft-07 validation of the emitted schema against legal fixtures | Implemented as a test (`packages/definitions/test/json-schema.test.ts`). |
 
 The loader runs **outside** the workflow sandbox: it is the only place YAML is read, and it resolves a

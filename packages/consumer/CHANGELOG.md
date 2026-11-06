@@ -1,4 +1,4 @@
-# @naakwu/flowkit-consumer
+# @teopeurt/flowkit-consumer
 
 ## 1.0.0
 

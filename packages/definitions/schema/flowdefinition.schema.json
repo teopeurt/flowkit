@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "FlowDefinition",
-  "description": "A Flowkit workflow definition as authored in YAML or JSON. Generated from @naakwu/flowkit-core flowSchema; do not edit by hand.",
+  "description": "A Flowkit workflow definition as authored in YAML or JSON. Generated from @teopeurt/flowkit-core flowSchema; do not edit by hand.",
   "type": "object",
   "properties": {
     "id": {

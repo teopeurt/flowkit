@@ -10,13 +10,13 @@ import {
 } from './sync-release-versions';
 
 const packages = [
-  '@naakwu/flowkit-auth',
-  '@naakwu/flowkit-consumer',
-  '@naakwu/flowkit-core',
-  '@naakwu/flowkit-definitions',
-  '@naakwu/flowkit-notify',
-  '@naakwu/flowkit-tasks',
-  '@naakwu/flowkit-temporal',
+  '@teopeurt/flowkit-auth',
+  '@teopeurt/flowkit-consumer',
+  '@teopeurt/flowkit-core',
+  '@teopeurt/flowkit-definitions',
+  '@teopeurt/flowkit-notify',
+  '@teopeurt/flowkit-tasks',
+  '@teopeurt/flowkit-temporal',
 ] as const;
 
 const versionsByName = Object.fromEntries(packages.map((name) => [name, '1.0.0']));
@@ -28,45 +28,45 @@ const lockFixture = `{
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@naakwu/flowkit-workspace",
+      "name": "@teopeurt/flowkit-workspace",
       "version": "0.2.0",
       "devDependencies": {
         "@changesets/cli": "3.0.0",
       },
     },
     "packages/auth": {
-      "name": "@naakwu/flowkit-auth",
+      "name": "@teopeurt/flowkit-auth",
       "version": "0.2.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
     },
     "packages/consumer": {
-      "name": "@naakwu/flowkit-consumer",
+      "name": "@teopeurt/flowkit-consumer",
       "version": "0.2.0",
       "dependencies": {
-        "@naakwu/flowkit-core": "workspace:^",
-        "@naakwu/flowkit-tasks": "workspace:^",
+        "@teopeurt/flowkit-core": "workspace:^",
+        "@teopeurt/flowkit-tasks": "workspace:^",
       },
     },
     "packages/core": {
-      "name": "@naakwu/flowkit-core",
+      "name": "@teopeurt/flowkit-core",
       "version": "0.2.0",
       "dependencies": {
         "zod": "^3.25.42",
       },
     },
     "packages/definitions": {
-      "name": "@naakwu/flowkit-definitions",
+      "name": "@teopeurt/flowkit-definitions",
       "version": "0.2.0",
       "dependencies": {
-        "@naakwu/flowkit-core": "workspace:^",
-        "@naakwu/flowkit-temporal": "workspace:^",
+        "@teopeurt/flowkit-core": "workspace:^",
+        "@teopeurt/flowkit-temporal": "workspace:^",
         "yaml": "^2.9.0",
       },
     },
     "packages/notify": {
-      "name": "@naakwu/flowkit-notify",
+      "name": "@teopeurt/flowkit-notify",
       "version": "0.2.0",
       "dependencies": {
         "@noble/hashes": "^2.0.1",
@@ -74,33 +74,33 @@ const lockFixture = `{
       },
     },
     "packages/tasks": {
-      "name": "@naakwu/flowkit-tasks",
+      "name": "@teopeurt/flowkit-tasks",
       "version": "0.2.0",
       "dependencies": {
-        "@naakwu/flowkit-core": "workspace:^",
+        "@teopeurt/flowkit-core": "workspace:^",
         "@noble/hashes": "^2.0.1",
         "zod": "^3.25.42",
       },
     },
     "packages/temporal": {
-      "name": "@naakwu/flowkit-temporal",
+      "name": "@teopeurt/flowkit-temporal",
       "version": "0.2.0",
       "dependencies": {
-        "@naakwu/flowkit-consumer": "workspace:^",
-        "@naakwu/flowkit-core": "workspace:^",
+        "@teopeurt/flowkit-consumer": "workspace:^",
+        "@teopeurt/flowkit-core": "workspace:^",
         "@noble/hashes": "^2.0.1",
         "@temporalio/workflow": "1.16.2",
       },
     },
   },
   "packages": {
-    "@naakwu/flowkit-auth": ["@naakwu/flowkit-auth@workspace:packages/auth"],
-    "@naakwu/flowkit-consumer": ["@naakwu/flowkit-consumer@workspace:packages/consumer"],
-    "@naakwu/flowkit-core": ["@naakwu/flowkit-core@workspace:packages/core"],
-    "@naakwu/flowkit-definitions": ["@naakwu/flowkit-definitions@workspace:packages/definitions"],
-    "@naakwu/flowkit-notify": ["@naakwu/flowkit-notify@workspace:packages/notify"],
-    "@naakwu/flowkit-tasks": ["@naakwu/flowkit-tasks@workspace:packages/tasks"],
-    "@naakwu/flowkit-temporal": ["@naakwu/flowkit-temporal@workspace:packages/temporal"],
+    "@teopeurt/flowkit-auth": ["@teopeurt/flowkit-auth@workspace:packages/auth"],
+    "@teopeurt/flowkit-consumer": ["@teopeurt/flowkit-consumer@workspace:packages/consumer"],
+    "@teopeurt/flowkit-core": ["@teopeurt/flowkit-core@workspace:packages/core"],
+    "@teopeurt/flowkit-definitions": ["@teopeurt/flowkit-definitions@workspace:packages/definitions"],
+    "@teopeurt/flowkit-notify": ["@teopeurt/flowkit-notify@workspace:packages/notify"],
+    "@teopeurt/flowkit-tasks": ["@teopeurt/flowkit-tasks@workspace:packages/tasks"],
+    "@teopeurt/flowkit-temporal": ["@teopeurt/flowkit-temporal@workspace:packages/temporal"],
   },
 }
 `;
@@ -168,15 +168,15 @@ describe('requirePrimaryVersionConstant', () => {
       '',
     ].join('\n');
 
-    expect(requirePrimaryVersionConstant(source, '@naakwu/flowkit-auth')).toEqual({
+    expect(requirePrimaryVersionConstant(source, '@teopeurt/flowkit-auth')).toEqual({
       name: 'FLOWKIT_AUTH_VERSION',
       value: '0.2.0',
     });
   });
 
   test('throws when a package index has no FLOWKIT_*_VERSION export', () => {
-    expect(() => requirePrimaryVersionConstant("export * from './contracts';\n", '@naakwu/flowkit-consumer')).toThrow(
-      /@naakwu\/flowkit-consumer.*FLOWKIT_\*_VERSION/,
+    expect(() => requirePrimaryVersionConstant("export * from './contracts';\n", '@teopeurt/flowkit-consumer')).toThrow(
+      /@teopeurt\/flowkit-consumer.*FLOWKIT_\*_VERSION/,
     );
   });
 
@@ -187,7 +187,7 @@ describe('requirePrimaryVersionConstant', () => {
       '',
     ].join('\n');
 
-    expect(() => requirePrimaryVersionConstant(source, '@naakwu/flowkit-core')).toThrow(/more than one/);
+    expect(() => requirePrimaryVersionConstant(source, '@teopeurt/flowkit-core')).toThrow(/more than one/);
   });
 });
 
@@ -224,9 +224,9 @@ describe('syncLockfileWorkspaceVersions', () => {
     }
 
     // The workspace root and dependency/lock data are untouched.
-    expect(updated).toContain('"name": "@naakwu/flowkit-workspace",\n      "version": "0.2.0",');
-    expect(updated).toContain('"@naakwu/flowkit-core": "workspace:^",');
-    expect(updated).toContain('"@naakwu/flowkit-definitions": ["@naakwu/flowkit-definitions@workspace:packages/definitions"],');
+    expect(updated).toContain('"name": "@teopeurt/flowkit-workspace",\n      "version": "0.2.0",');
+    expect(updated).toContain('"@teopeurt/flowkit-core": "workspace:^",');
+    expect(updated).toContain('"@teopeurt/flowkit-definitions": ["@teopeurt/flowkit-definitions@workspace:packages/definitions"],');
     expect(updated).toContain('"@changesets/cli": "3.0.0",');
   });
 
@@ -238,7 +238,7 @@ describe('syncLockfileWorkspaceVersions', () => {
 
   test('throws when a workspace package is missing from the version map', () => {
     const missing = { ...versionsByName } as Record<string, string>;
-    delete missing['@naakwu/flowkit-temporal'];
+    delete missing['@teopeurt/flowkit-temporal'];
 
     expect(() => syncLockfileWorkspaceVersions(lockFixture, missing)).toThrow(/flowkit-temporal/);
   });
@@ -260,8 +260,8 @@ describe('lockstepVersionFromManifests', () => {
   test('throws on a non-lockstep manifest set', () => {
     expect(() =>
       lockstepVersionFromManifests([
-        { name: '@naakwu/flowkit-core', version: '1.0.0' },
-        { name: '@naakwu/flowkit-auth', version: '0.2.0' },
+        { name: '@teopeurt/flowkit-core', version: '1.0.0' },
+        { name: '@teopeurt/flowkit-auth', version: '0.2.0' },
       ]),
     ).toThrow(/auth.*0\.2\.0/);
   });

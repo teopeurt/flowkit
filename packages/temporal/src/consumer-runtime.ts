@@ -1,4 +1,4 @@
-import type { FlowCommand } from '@naakwu/flowkit-core';
+import type { FlowCommand } from '@teopeurt/flowkit-core';
 
 import type {
   FlowkitSignalCommand,

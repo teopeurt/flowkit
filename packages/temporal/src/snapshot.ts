@@ -1,7 +1,7 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { defineFlow, flowSchema } from '@naakwu/flowkit-core';
-import type { FlowDefinition } from '@naakwu/flowkit-core';
+import { defineFlow, flowSchema } from '@teopeurt/flowkit-core';
+import type { FlowDefinition } from '@teopeurt/flowkit-core';
 
 import type { DefinitionHash, PublishedFlowDefinition } from './contracts';
 

@@ -4,21 +4,21 @@
     [
       {
         "kind": "publish",
-        "name": "@naakwu/flowkit-auth",
+        "name": "@teopeurt/flowkit-auth",
         "version": "1.0.0",
         "access": "restricted",
         "tag": "latest"
       },
       {
         "kind": "publish",
-        "name": "@naakwu/flowkit-core",
+        "name": "@teopeurt/flowkit-core",
         "version": "1.0.0",
         "access": "restricted",
         "tag": "latest"
       },
       {
         "kind": "publish",
-        "name": "@naakwu/flowkit-notify",
+        "name": "@teopeurt/flowkit-notify",
         "version": "1.0.0",
         "access": "restricted",
         "tag": "latest"
@@ -27,7 +27,7 @@
     [
       {
         "kind": "publish",
-        "name": "@naakwu/flowkit-tasks",
+        "name": "@teopeurt/flowkit-tasks",
         "version": "1.0.0",
         "access": "restricted",
         "tag": "latest"
@@ -36,7 +36,7 @@
     [
       {
         "kind": "publish",
-        "name": "@naakwu/flowkit-consumer",
+        "name": "@teopeurt/flowkit-consumer",
         "version": "1.0.0",
         "access": "restricted",
         "tag": "latest"
@@ -45,7 +45,7 @@
     [
       {
         "kind": "publish",
-        "name": "@naakwu/flowkit-temporal",
+        "name": "@teopeurt/flowkit-temporal",
         "version": "1.0.0",
         "access": "restricted",
         "tag": "latest"
@@ -54,7 +54,7 @@
     [
       {
         "kind": "publish",
-        "name": "@naakwu/flowkit-definitions",
+        "name": "@teopeurt/flowkit-definitions",
         "version": "1.0.0",
         "access": "restricted",
         "tag": "latest"

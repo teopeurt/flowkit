@@ -81,7 +81,7 @@ export function countChangedLines(before: string, after: string): number {
 
 /**
  * Rewrites only the `"version"` line that directly follows a workspace
- * `"name": "@naakwu/flowkit-*"` entry in bun.lock. Every other lockfile byte is
+ * `"name": "@teopeurt/flowkit-*"` entry in bun.lock. Every other lockfile byte is
  * preserved; a partial rewrite is treated as an error.
  */
 export function syncLockfileWorkspaceVersions(
@@ -196,7 +196,7 @@ async function main(): Promise<void> {
   const changedPaths: string[] = [];
 
   for (const directory of packageDirectories) {
-    const manifest = manifests.find(({ name }) => name === `@naakwu/flowkit-${directory}`);
+    const manifest = manifests.find(({ name }) => name === `@teopeurt/flowkit-${directory}`);
     if (!manifest) {
       throw new Error(`No workspace manifest found for packages/${directory}`);
     }

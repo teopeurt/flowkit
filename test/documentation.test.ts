@@ -70,7 +70,7 @@ describe('public documentation contract', () => {
 
     expect(license).toContain('Apache License');
     expect(license).toContain('Version 2.0, January 2004');
-    expect(npmrc).toContain('@naakwu:registry=https://npm.pkg.github.com');
+    expect(npmrc).toContain('@teopeurt:registry=https://npm.pkg.github.com');
     expect(npmrc).toContain('${GITHUB_PACKAGES_TOKEN}');
     for (const document of documents) expect(document).not.toMatch(tokenPattern);
   });
@@ -104,7 +104,7 @@ describe('public documentation contract', () => {
         name: string;
         dependencies?: Record<string, string>;
       };
-      for (const dependency of Object.keys(manifest.dependencies ?? {}).filter((name) => name.startsWith('@naakwu/flowkit-'))) {
+      for (const dependency of Object.keys(manifest.dependencies ?? {}).filter((name) => name.startsWith('@teopeurt/flowkit-'))) {
         expect(renderedGraph).toContain(`${dependency} → ${manifest.name}`);
       }
     }

@@ -1,8 +1,11 @@
 {
-  "name": "@naakwu/flowkit-tasks",
+  "name": "@teopeurt/flowkit-tasks",
   "version": "1.0.0",
   "private": false,
-  "publishConfig": { "registry": "https://npm.pkg.github.com" },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
   "type": "module",
   "description": "Portable human task, inbox, claiming, and invitation contracts for Flowkit",
   "main": "./dist/index.cjs",
@@ -15,19 +18,32 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsup --config tsup.config.ts",
     "test": "bun test src"
   },
   "dependencies": {
-    "@naakwu/flowkit-core": "workspace:^",
+    "@teopeurt/flowkit-core": "workspace:^",
     "@noble/hashes": "^2.0.1",
     "zod": "^3.25.42"
   },
   "devDependencies": {
     "tsup": "^8.5.0",
     "typescript": "^5"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teopeurt/flowkit.git",
+    "directory": "packages/tasks"
+  },
+  "homepage": "https://github.com/teopeurt/flowkit",
+  "bugs": {
+    "url": "https://github.com/teopeurt/flowkit/issues"
   }
 }

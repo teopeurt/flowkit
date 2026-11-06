@@ -2,7 +2,7 @@
 
 **Status:** APPROVED, v1.0. Implemented; see §15 for where the implementation clarifies or departs from the text above.
 **Depends on:** Spec A, auto-gated AI steps (`gate: auto` + `decide`), `2026-11-06-auto-gated-ai-steps.md`.
-**Target:** `@naakwu/flowkit-core`, `-temporal`, `-consumer`, `-definitions`. Baseline: `main` at `df8a8fc` (all packages 1.0.0).
+**Target:** `@teopeurt/flowkit-core`, `-temporal`, `-consumer`, `-definitions`. Baseline: `main` at `df8a8fc` (all packages 1.0.0).
 
 ---
 

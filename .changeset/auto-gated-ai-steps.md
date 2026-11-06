@@ -1,8 +1,8 @@
 ---
-"@naakwu/flowkit-core": minor
-"@naakwu/flowkit-temporal": minor
-"@naakwu/flowkit-consumer": minor
-"@naakwu/flowkit-definitions": minor
+"@teopeurt/flowkit-core": minor
+"@teopeurt/flowkit-temporal": minor
+"@teopeurt/flowkit-consumer": minor
+"@teopeurt/flowkit-definitions": minor
 ---
 
 Add `gate: auto` for AI steps and a new `orchestrate` step kind.

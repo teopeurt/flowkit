@@ -1,4 +1,4 @@
-# @naakwu/flowkit-tasks
+# @teopeurt/flowkit-tasks
 
 ## 1.0.0
 

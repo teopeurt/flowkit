@@ -1,4 +1,4 @@
-import type { FlowDefinition } from '@naakwu/flowkit-core';
+import type { FlowDefinition } from '@teopeurt/flowkit-core';
 
 import type { FlowkitWorkflowInput } from '../contracts';
 import { publishDefinition } from '../snapshot';

@@ -1,8 +1,11 @@
 {
-  "name": "@naakwu/flowkit-core",
+  "name": "@teopeurt/flowkit-core",
   "version": "1.0.0",
   "private": false,
-  "publishConfig": { "registry": "https://npm.pkg.github.com" },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "public"
+  },
   "type": "module",
   "description": "Engine-agnostic workflow definitions and pure transition evaluation",
   "main": "./dist/index.cjs",
@@ -29,5 +32,15 @@
   "devDependencies": {
     "tsup": "^8.5.0",
     "typescript": "^5"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teopeurt/flowkit.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/teopeurt/flowkit",
+  "bugs": {
+    "url": "https://github.com/teopeurt/flowkit/issues"
   }
 }

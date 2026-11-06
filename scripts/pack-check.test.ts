@@ -9,7 +9,7 @@ import {
 } from './pack-check';
 
 const manifest = {
-  name: '@naakwu/flowkit-auth',
+  name: '@teopeurt/flowkit-auth',
   version: '0.2.0',
   files: ['dist', 'README.md'],
   exports: {
@@ -51,8 +51,8 @@ describe('packed artifact boundaries', () => {
 
   test('enumerates every declared subpath for ESM and CommonJS checks', () => {
     expect(runtimeSpecifiers(manifest)).toEqual([
-      '@naakwu/flowkit-auth',
-      '@naakwu/flowkit-auth/roles',
+      '@teopeurt/flowkit-auth',
+      '@teopeurt/flowkit-auth/roles',
     ]);
   });
 
@@ -72,11 +72,11 @@ describe('packed artifact boundaries', () => {
     expect(
       createConsumerManifest([
         {
-          manifest: { name: '@naakwu/flowkit-core' },
+          manifest: { name: '@teopeurt/flowkit-core' },
           tarballPath: '/tmp/tarballs/core.tgz',
         },
         {
-          manifest: { name: '@naakwu/flowkit-tasks' },
+          manifest: { name: '@teopeurt/flowkit-tasks' },
           tarballPath: '/tmp/tarballs/tasks.tgz',
         },
       ]),
@@ -85,12 +85,12 @@ describe('packed artifact boundaries', () => {
       private: true,
       type: 'module',
       dependencies: {
-        '@naakwu/flowkit-core': 'file:/tmp/tarballs/core.tgz',
-        '@naakwu/flowkit-tasks': 'file:/tmp/tarballs/tasks.tgz',
+        '@teopeurt/flowkit-core': 'file:/tmp/tarballs/core.tgz',
+        '@teopeurt/flowkit-tasks': 'file:/tmp/tarballs/tasks.tgz',
       },
       overrides: {
-        '@naakwu/flowkit-core': 'file:/tmp/tarballs/core.tgz',
-        '@naakwu/flowkit-tasks': 'file:/tmp/tarballs/tasks.tgz',
+        '@teopeurt/flowkit-core': 'file:/tmp/tarballs/core.tgz',
+        '@teopeurt/flowkit-tasks': 'file:/tmp/tarballs/tasks.tgz',
       },
     });
   });
@@ -98,16 +98,16 @@ describe('packed artifact boundaries', () => {
   test('rejects public version exports that differ from the packed manifest', () => {
     expect(() =>
       assertPublicVersionExports(
-        { name: '@naakwu/flowkit-core', version: '0.2.0' },
-        '@naakwu/flowkit-core',
+        { name: '@teopeurt/flowkit-core', version: '0.2.0' },
+        '@teopeurt/flowkit-core',
         { FLOWKIT_CORE_VERSION: '0.1.0' },
       ),
     ).toThrow(/FLOWKIT_CORE_VERSION.*0\.1\.0.*0\.2\.0/);
 
     expect(() =>
       assertPublicVersionExports(
-        { name: '@naakwu/flowkit-auth', version: '0.2.0' },
-        '@naakwu/flowkit-auth/testing',
+        { name: '@teopeurt/flowkit-auth', version: '0.2.0' },
+        '@teopeurt/flowkit-auth/testing',
         { testingContractVersion: '0.2.0' },
       ),
     ).not.toThrow();

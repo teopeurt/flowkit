@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: '@naakwu'
+          scope: '@teopeurt'
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -95,7 +95,7 @@ jobs:
         if: steps.publish_plan.outputs.has_releases == 'true'
         uses: actions/checkout@v7
         with:
-          repository: naakwu/flowkit-demo
+          repository: teopeurt/flowkit-demo
           path: flowkit-demo
           token: ${{ secrets.FLOWKIT_DEMO_READ_TOKEN || secrets.GITHUB_TOKEN }}
 

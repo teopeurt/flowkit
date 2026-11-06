@@ -1,4 +1,4 @@
-import type { FlowDefinition, FlowState } from '@naakwu/flowkit-core';
+import type { FlowDefinition, FlowState } from '@teopeurt/flowkit-core';
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };

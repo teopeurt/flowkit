@@ -7,7 +7,7 @@ import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 
 import { loadFlowFile } from '../src/index';
-import { publishDefinition } from '@naakwu/flowkit-temporal';
+import { publishDefinition } from '@teopeurt/flowkit-temporal';
 
 import { midFlightWorkflow } from './fixtures/midflight-workflow';
 import type { MidFlightInput, PinnedView } from './fixtures/midflight-workflow';
@@ -122,7 +122,7 @@ describe('workflow-bundle isolation', () => {
     // Externalise the workspace packages, zod, and the sandbox runtime so only
     // the `yaml` parser (imported by the loader, and nothing else here) is ever
     // inlined. The parser is then the one thing that can mark a bundle.
-    const external = ['@temporalio/*', '@naakwu/*', 'zod', '@noble/*', 'node:*'];
+    const external = ['@temporalio/*', '@teopeurt/*', 'zod', '@noble/*', 'node:*'];
 
     // Control: bundling the loader entry pulls the `yaml` parser in.
     const loaderBundle = await Bun.build({

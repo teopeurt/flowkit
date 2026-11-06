@@ -1,12 +1,12 @@
 import { condition, defineQuery, defineSignal, setHandler } from '@temporalio/workflow';
 
-import { verifyPublishedDefinition } from '@naakwu/flowkit-temporal';
-import type { PublishedFlowDefinition } from '@naakwu/flowkit-temporal';
+import { verifyPublishedDefinition } from '@teopeurt/flowkit-temporal';
+import type { PublishedFlowDefinition } from '@teopeurt/flowkit-temporal';
 
 /**
  * Minimal deterministic workflow that pins a published definition and exposes the
  * pinned identity via query. It imports only `@temporalio/workflow` and
- * `@naakwu/flowkit-temporal` (never the YAML loader), mirroring the sandbox
+ * `@teopeurt/flowkit-temporal` (never the YAML loader), mirroring the sandbox
  * boundary: YAML is resolved before start and the workflow only ever sees the
  * immutable snapshot + hash.
  */

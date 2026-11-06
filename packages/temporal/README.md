@@ -1,10 +1,12 @@
-# `@naakwu/flowkit-temporal`
+> Versions through 1.0.0 used `@naakwu/*`; from 1.1.0 use the public `@teopeurt/*` package with the same API.
 
-Temporal runtime helpers are exported from `@naakwu/flowkit-temporal`; the workflow factory is exported from `@naakwu/flowkit-temporal/workflow`.
+# `@teopeurt/flowkit-temporal`
+
+Temporal runtime helpers are exported from `@teopeurt/flowkit-temporal`; the workflow factory is exported from `@teopeurt/flowkit-temporal/workflow`.
 
 ```ts
-import { publishDefinition } from '@naakwu/flowkit-temporal';
-import { createFlowkitWorkflow } from '@naakwu/flowkit-temporal/workflow';
+import { publishDefinition } from '@teopeurt/flowkit-temporal';
+import { createFlowkitWorkflow } from '@teopeurt/flowkit-temporal/workflow';
 
 const publish = publishDefinition;
 const workflowFactory = createFlowkitWorkflow;
@@ -19,7 +21,7 @@ and a worker that implements `FlowkitOrchestrationActivities`: `planOrchestratio
 `synthesizeOrchestration`. See `docs/definitions-yaml.md` for the semantics.
 
 ```ts
-import { createFlowkitWorkflow } from '@naakwu/flowkit-temporal/workflow';
+import { createFlowkitWorkflow } from '@teopeurt/flowkit-temporal/workflow';
 
 export const flow = createFlowkitWorkflow({
   registries: {

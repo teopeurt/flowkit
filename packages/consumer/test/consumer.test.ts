@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import type { FlowTask, TaskClaimCommand, TaskInboxQuery, TaskStore } from '@naakwu/flowkit-tasks';
+import type { FlowTask, TaskClaimCommand, TaskInboxQuery, TaskStore } from '@teopeurt/flowkit-tasks';
 import {
   createFlowkitConsumer,
   type FlowkitActorRef,

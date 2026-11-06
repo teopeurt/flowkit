@@ -1,4 +1,4 @@
-# @naakwu/flowkit-definitions
+# @teopeurt/flowkit-definitions
 
 ## 1.0.0
 

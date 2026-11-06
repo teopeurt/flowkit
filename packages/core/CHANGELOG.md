@@ -1,4 +1,4 @@
-# @naakwu/flowkit-core
+# @teopeurt/flowkit-core
 
 ## 1.0.0
 
