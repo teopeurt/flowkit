@@ -1,5 +1,7 @@
 # Flow definition authoring format (YAML binding)
 
+For the engine, replay, gate, and orchestration internals behind this format, see the [technical deep dive](./definitions-deep-dive.md).
+
 **Status:** format specification. See [Tooling status](#8-tooling-status) for the implementation that
 enforces it in this checkout.
 
