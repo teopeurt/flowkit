@@ -61,6 +61,8 @@ export interface FlowkitStepResult {
   status: 'completed' | 'degraded_to_human';
   entryEpoch: number;
   output?: unknown;
+  /** Present for `gate: auto` AI steps: whether the deciding rule released the stage or left it to a human. */
+  gateDecision?: { outcome: 'auto' | 'human'; action?: string };
 }
 
 /** Full interpreter state; carried across Continue-As-New unchanged. */
@@ -233,6 +235,8 @@ export interface RuleContext {
   subject: Readonly<Record<string, unknown>>;
   facts: Readonly<Record<string, unknown>>;
   priorTransition?: TransitionRecord;
+  /** Set only when the rule is deciding an `auto` AI gate: that step's raw output. */
+  gatedOutput?: unknown;
 }
 
 /**

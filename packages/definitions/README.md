@@ -181,7 +181,7 @@ Validate the same document in CI with any draft-07 validator, or let the Flowkit
 ## What the schema does not cover
 
 `flowSchema` enforces rules that JSON Schema cannot express, notably that an AI step must declare
-`gate: human` and that no other step kind may declare a gate. Those refinements are still enforced
+`gate: human` or `gate: auto` (with a `decide` rule) and that no other step kind may declare a gate. Those refinements are still enforced
 whenever a definition passes through `defineFlow`; the schema only catches unknown fields, wrong
 types, and wrong enum values. The loader enforces them too, since it ends in `flowSchema`. See
 [definitions-yaml.md](../../docs/definitions-yaml.md) for the full contract and its limits.

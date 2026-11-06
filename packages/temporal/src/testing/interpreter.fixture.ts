@@ -200,3 +200,30 @@ export const actionSlaInput = (): FlowkitWorkflowInput => ({ published: publishD
 const continuationInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: slaRegistries, shouldContinueAsNew: () => true });
 export async function continuationWorkflow(input: FlowkitWorkflowInput) { return await continuationInterpreter(input); }
 export const continuationInput = (): FlowkitWorkflowInput => ({ published: publishDefinition({ definition: slaDefinition({ notify: 'reminder' }) }), subject: { id: 'continuation', organizationId: 'org-1' } });
+
+const autoGateDefinition: FlowDefinition = {
+  id: 'auto-gate-flow', version: 1, roles: ['reviewer'], initialStage: 'plan',
+  stages: {
+    plan: {
+      pendingRole: 'reviewer',
+      steady: true,
+      entry: [{ kind: 'ai', ref: 'assess', gate: 'auto', decide: 'lowRisk' }],
+      actions: {
+        proceed: { to: 'done', kind: 'system' },
+        approve: { to: 'done', policy: 'reviewerOnly' },
+      },
+    },
+    done: { final: true },
+  },
+};
+const autoGateRegistries = (decide: (gatedOutput: unknown) => string | undefined) => ({
+  policies: { reviewerOnly: (context: { actor?: { roles: string[] } }) => context.actor?.roles.includes('reviewer') ?? false },
+  rules: { lowRisk: { actions: ['proceed'], run: (context: { gatedOutput?: unknown }) => decide(context.gatedOutput) } },
+});
+const autoGateReleaseInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: autoGateRegistries((output) => (output === 'ai:assess' ? 'proceed' : undefined)) });
+const autoGateDeclineInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: autoGateRegistries(() => undefined) });
+const autoGateThrowInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: autoGateRegistries(() => { throw new Error('rule exploded'); }) });
+export async function autoGateReleaseWorkflow(input: FlowkitWorkflowInput) { return await autoGateReleaseInterpreter(input); }
+export async function autoGateDeclineWorkflow(input: FlowkitWorkflowInput) { return await autoGateDeclineInterpreter(input); }
+export async function autoGateThrowWorkflow(input: FlowkitWorkflowInput) { return await autoGateThrowInterpreter(input); }
+export const autoGateInput = (): FlowkitWorkflowInput => ({ published: publishDefinition({ definition: autoGateDefinition }), subject: { id: 'auto-gate-1', organizationId: 'org-1' } });

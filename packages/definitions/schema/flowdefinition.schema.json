@@ -185,7 +185,13 @@
                 },
                 "gate": {
                   "type": "string",
-                  "const": "human"
+                  "enum": [
+                    "human",
+                    "auto"
+                  ]
+                },
+                "decide": {
+                  "type": "string"
                 }
               },
               "required": [

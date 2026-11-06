@@ -5,6 +5,10 @@ import { WorkflowUpdateStage } from '@temporalio/client';
 
 import { testActivities } from './testing/test-activities';
 import {
+  autoGateDeclineWorkflow,
+  autoGateInput,
+  autoGateReleaseWorkflow,
+  autoGateThrowWorkflow,
   blockedRuleFlowkitWorkflow,
   entryFlowkitInput,
   entryFlowkitWorkflow,
@@ -330,6 +334,55 @@ describe('createFlowkitWorkflow', () => {
       await degraded.cancel();
     } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
   }, 30_000);
+
+  testWithTimeout('auto-gated AI steps release the stage only when the deciding rule says so, and otherwise fail closed to a human', async () => {
+    const environment = await TestWorkflowEnvironment.createLocal();
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue: 'flowkit-temporal-workflow-test', workflowsPath: new URL('./testing/interpreter.fixture.ts', import.meta.url).pathname, activities: testActivities });
+    const runWorker = worker.run();
+    type View = { state: { stage: string }; completed: boolean; stepResults: Record<string, { status: string; gateDecision?: { outcome: string; action?: string } }> };
+    const start = (workflow: typeof autoGateReleaseWorkflow, workflowId: string) => environment.client.workflow.start(workflow, { taskQueue: 'flowkit-temporal-workflow-test', workflowId, args: [autoGateInput()] });
+    // The entry step runs asynchronously after start, so wait for its recorded result before asserting on it.
+    const settled = async (handle: Awaited<ReturnType<typeof start>>): Promise<View> => {
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        const view = await handle.query('getState') as View;
+        if (view.stepResults['0:0']) return view;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      throw new Error('entry step never settled');
+    };
+    try {
+      testActivities.reset();
+      const released = await start(autoGateReleaseWorkflow, 'auto-gate-release');
+      await released.result();
+      expect(testActivities.transitions.map((t) => t.command.action)).toEqual(['proceed']);
+      expect(testActivities.transitions[0].origin).toBe('rule');
+      expect(testActivities.transitions[0].operationId).toBe('gate:0:0');
+
+      testActivities.reset();
+      const declined = await start(autoGateDeclineWorkflow, 'auto-gate-decline');
+      let view = await settled(declined);
+      expect(view.state.stage).toBe('plan');
+      expect(view.stepResults['0:0'].gateDecision).toEqual({ outcome: 'human' });
+      expect(testActivities.transitions).toEqual([]);
+      await declined.cancel();
+
+      testActivities.reset();
+      const threw = await start(autoGateThrowWorkflow, 'auto-gate-throw');
+      view = await settled(threw);
+      expect(view.state.stage).toBe('plan');
+      expect(view.stepResults['0:0'].gateDecision).toEqual({ outcome: 'human' });
+      await threw.cancel();
+
+      testActivities.reset(); testActivities.failAi = true;
+      const degraded = await start(autoGateReleaseWorkflow, 'auto-gate-degraded');
+      view = await settled(degraded);
+      expect(view.state.stage).toBe('plan');
+      expect(view.stepResults['0:0'].status).toBe('degraded_to_human');
+      expect(view.stepResults['0:0'].gateDecision).toBe(undefined);
+      expect(testActivities.transitions).toEqual([]);
+      await degraded.cancel();
+    } finally { await worker.shutdown(); await runWorker; await environment.teardown(); }
+  }, 60_000);
 
   testWithTimeout('projects rule auto-transitions and rejects guarded rules before projection', async () => {
     const environment = await TestWorkflowEnvironment.createLocal();

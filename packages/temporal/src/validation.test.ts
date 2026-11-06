@@ -310,3 +310,36 @@ describe('validateFlowkit', () => {
     expect(codes(issues)).toContainEqual('final-stage-schedules-work');
   });
 });
+
+describe('auto-gated AI step validation', () => {
+  const autoGated = (): FlowDefinition => {
+    const d = definition();
+    d.stages.draft.entry = [{ kind: 'ai', ref: 'summarize', gate: 'auto', decide: 'lowRisk' }];
+    d.stages.draft.actions = { ...d.stages.draft.actions, proceed: { to: 'review', kind: 'system' } };
+    return d;
+  };
+  const withRule = (actions: string[]) => ({
+    ...registries(),
+    rules: { ...registries().rules, lowRisk: { run: () => undefined, actions } },
+  });
+  const validate = (reg: ReturnType<typeof withRule> | ReturnType<typeof registries>) =>
+    validateFlowkit({ published: publishDefinition({ definition: autoGated() }), registries: reg });
+
+  test('accepts an auto gate whose deciding rule only targets available system actions', () => {
+    expect(validate(withRule(['proceed']))).toEqual([]);
+  });
+
+  test('reports a deciding rule that is not registered', () => {
+    expect(validate(registries())).toContainEqual(
+      expect.objectContaining({ code: 'missing-rule-ref', path: 'stages.draft.entry.0.decide' }),
+    );
+  });
+
+  test('rejects a deciding rule that may return a human action', () => {
+    expect(codes(validate(withRule(['submit'])))).toContainEqual('rule-action-not-system');
+  });
+
+  test('rejects a deciding rule that may return an action the stage does not have', () => {
+    expect(codes(validate(withRule(['nope'])))).toContainEqual('rule-action-unavailable');
+  });
+});

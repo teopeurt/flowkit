@@ -69,7 +69,8 @@ describe('flow definition JSON Schema', () => {
     const step = at(stage, 'properties', 'entry', 'items');
     expect(at(step, 'properties', 'kind', 'enum')).toEqual(['system', 'ai', 'rule']);
     expect(at(step, 'properties', 'ref', 'type')).toBe('string');
-    expect(at(step, 'properties', 'gate', 'const')).toBe('human');
+    expect(at(step, 'properties', 'gate', 'enum')).toEqual(['human', 'auto']);
+    expect(at(step, 'properties', 'decide', 'type')).toBe('string');
     expect(at(step, 'required')).toEqual(expect.arrayContaining(['kind', 'ref']));
 
     const action = at(stage, 'properties', 'actions', 'additionalProperties');

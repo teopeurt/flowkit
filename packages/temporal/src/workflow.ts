@@ -174,7 +174,28 @@ export function createFlowkitWorkflow(config: FlowkitWorkflowConfig): FlowkitWor
             const result = await aiActivities.executeAiStep({ ...stepIdentity, ref: step.ref, definition: definitionIdentity, subject: input.subject, state: execution.state, entryEpoch: execution.entryEpoch, entryReason: reason, priorTransition });
             execution.stepResults[key] = { ref: step.ref, kind: 'ai', status: 'completed', entryEpoch: execution.entryEpoch, output: result.output };
             if (isFactsObject(result.output)) Object.assign(entryFacts, result.output);
-          } catch {
+            if (step.gate === 'auto' && step.decide !== undefined) {
+              // Fail closed: a missing rule, a throw, or no answer all leave the stage waiting on a human.
+              let action: string | undefined;
+              try {
+                const decider = Object.hasOwn(config.registries.rules ?? {}, step.decide) ? config.registries.rules?.[step.decide] : undefined;
+                action = decider?.run({ definition, state: execution.state, subject: input.subject.metadata ?? {}, facts: entryFacts, priorTransition, gatedOutput: result.output });
+              } catch {
+                action = undefined;
+              }
+              if (action) {
+                if (automaticTransitions >= (config.maxAutomaticTransitionsPerTurn ?? 32)) {
+                  throw ApplicationFailure.nonRetryable('Automatic transition limit exceeded.', 'FLOWKIT_AUTOMATIC_LOOP');
+                }
+                automaticTransitions += 1;
+                execution.stepResults[key].gateDecision = { outcome: 'auto', action };
+                automaticCommands.push({ operationId: `gate:${execution.entryEpoch}:${index}`, origin: 'rule', command: { action, actorId: 'system' } });
+              } else {
+                execution.stepResults[key].gateDecision = { outcome: 'human' };
+              }
+            }
+          } catch (error) {
+            if (error instanceof ApplicationFailure && error.type === 'FLOWKIT_AUTOMATIC_LOOP') throw error;
             execution.stepResults[key] = { ref: step.ref, kind: 'ai', status: 'degraded_to_human', entryEpoch: execution.entryEpoch };
           }
           continue;

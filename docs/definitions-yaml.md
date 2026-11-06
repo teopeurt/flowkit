@@ -75,7 +75,26 @@ Each entry step (`StepDef`):
 | --- | --- | --- |
 | `kind` | `system` \| `ai` \| `rule` | Step kind. |
 | `ref` | string | Name resolved from the consumer registry at runtime. This is the escape hatch: logic that cannot be serialised stays in code. |
-| `gate` | `human` | Only valid on `ai` steps, and required there: AI output is recorded for a human to act on rather than transitioning automatically. |
+| `gate` | `human` \| `auto` | Only valid on `ai` steps, and required there. `human`: AI output is recorded for a person to act on. `auto`: the named `decide` rule may fire a system action from the output (see below). |
+| `decide` | string | Required with `gate: auto`, rejected otherwise. Name of a rule in the consumer's `rules` registry. |
+
+**Auto gates.** `gate: auto` lets an AI step release its stage without a person, but only through a
+rule the consumer wrote and registered. After the AI step completes, the rule runs with the step's
+output (`gatedOutput`) and the accumulated entry facts. If it returns a system action name, that action
+is fired as a `rule`-origin command with operation id `gate:<epoch>:<index>`; the step result records
+`gateDecision: { outcome: 'auto', action }`. In every other case the stage waits for a human exactly as
+with `gate: human`: the rule returned nothing, the rule threw, the rule is not registered, or the AI
+step degraded (`degraded_to_human`). `validateFlowkit` requires the `decide` rule to be registered and
+to name only system actions available from the stage. Auto-fired actions still go through the action's
+guards and count toward `maxAutomaticTransitionsPerTurn`. Because an undecided auto gate falls back to a
+human, the stage still needs an SLA, a `steady` marker or a rule to satisfy `lintFlow`.
+
+```yaml
+entry:
+  - { kind: ai, ref: assessChange, gate: auto, decide: lowRiskAutoApprove }
+actions:
+  proceed: { to: implement, kind: system, guards: [withinBudget] }
+  approve: { to: implement, kind: human, policy: reviewerCanApprove }   # fallback when not auto-released
 
 Notifications (`NotificationDef`):
 
@@ -174,7 +193,7 @@ row states what is enforced, not what is advisable.
 | --- | --- | --- |
 | YAML loader (`parseFlowYaml` / `loadFlowFile`) | Everything listed in §1: document count, key and tag rules, the version spelling, the byte cap, the alias limit, then everything `flowSchema` rejects. | Anything needing a consumer registry, and the graph checks below. |
 | JSON Schema (`schema/flowdefinition.schema.json`) | Unknown fields, wrong types, wrong enum values, missing top-level keys. Usable from any editor or CI step. | Anything requiring cross-field logic; see below. |
-| `defineFlow` (Zod `flowSchema`) | Everything the schema catches, plus refinements such as "an AI step must declare `gate: human`, and only AI steps may declare a gate". | Whether `ref`s, policies, guards, templates, and channels actually resolve. |
+| `defineFlow` (Zod `flowSchema`) | Everything the schema catches, plus refinements such as "an AI step must declare `gate` (`human` or `auto`), `gate: auto` requires `decide` and `decide` requires `gate: auto`, and only AI steps may declare a gate". | Whether `ref`s, policies, guards, templates, and channels actually resolve. |
 | `lintFlow` / `lintInterpreterFlow` (`@naakwu/flowkit-core`) | Graph and wiring problems: unreachable stages, dead ends, actions on final stages, human actions without a policy, stages with no SLA, rule, or steady marker. | Whether a referenced name exists in a consumer registry. |
 | `validateFlowkit` (`@naakwu/flowkit-temporal`) | Everything above plus declared-ref validation against consumer registries, and SLA duration syntax. This is the boot gate a worker should run before accepting work. | Runtime behaviour of the resolved handlers. |
 

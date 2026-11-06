@@ -26,6 +26,7 @@ export interface FlowkitStepResult {
   status: 'completed' | 'degraded_to_human';
   entryEpoch: number;
   output?: unknown;
+  gateDecision?: { outcome: 'auto' | 'human'; action?: string };
 }
 
 export interface FlowkitStateView {

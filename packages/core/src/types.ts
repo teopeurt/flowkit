@@ -6,7 +6,14 @@ export interface TrackDef {
 export interface StepDef {
   kind: 'system' | 'ai' | 'rule';
   ref: string;
-  gate?: 'human';
+  /**
+   * AI steps only. `human`: the output is recorded for a person to act on.
+   * `auto`: a named rule (`decide`) may fire a system action from the output;
+   * if it declines, throws, or the step degrades, the stage waits for a human.
+   */
+  gate?: 'human' | 'auto';
+  /** Rule ref (from the rules registry) that decides an `auto` gate. Required with, and only valid with, `gate: auto`. */
+  decide?: string;
 }
 
 export interface NotificationDef {

@@ -20,7 +20,8 @@ const stepDefSchema: z.ZodType<StepDef> = z
   .object({
     kind: z.enum(['system', 'ai', 'rule']),
     ref: z.string(),
-    gate: z.literal('human').optional(),
+    gate: z.enum(['human', 'auto']).optional(),
+    decide: z.string().optional(),
   })
   .strict()
   .superRefine((step, ctx) => {
@@ -28,8 +29,16 @@ const stepDefSchema: z.ZodType<StepDef> = z
       addIssue(ctx, ['gate'], `Step gate is only accepted on AI steps, not "${step.kind}" steps.`);
     }
 
-    if (step.kind === 'ai' && step.gate !== 'human') {
-      addIssue(ctx, ['gate'], `AI step "${step.ref}" must declare gate "human".`);
+    if (step.kind === 'ai' && step.gate === undefined) {
+      addIssue(ctx, ['gate'], `AI step "${step.ref}" must declare gate "human" or "auto".`);
+    }
+
+    if (step.gate === 'auto' && step.decide === undefined) {
+      addIssue(ctx, ['decide'], `AI step "${step.ref}" with gate "auto" must name a deciding rule in "decide".`);
+    }
+
+    if (step.decide !== undefined && step.gate !== 'auto') {
+      addIssue(ctx, ['decide'], `Step "decide" is only accepted with gate "auto".`);
     }
   });
 

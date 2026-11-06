@@ -95,14 +95,17 @@ const validateEntryRefs = (
         pushIssue(issues, 'missing-ai-step-ref', path, `Missing AI step ref "${step.ref}".`);
       }
 
-      if (step.kind !== 'rule') {
+      const ruleRef = step.kind === 'rule' ? step.ref : step.kind === 'ai' && step.gate === 'auto' ? step.decide : undefined;
+
+      if (ruleRef === undefined) {
         continue;
       }
 
-      const rule = ownRef(registries.rules, step.ref);
+      const rulePath = step.kind === 'ai' ? pathFor('stages', stageName, 'entry', index, 'decide') : path;
+      const rule = ownRef(registries.rules, ruleRef);
 
       if (!rule) {
-        pushIssue(issues, 'missing-rule-ref', path, `Missing rule ref "${step.ref}".`);
+        pushIssue(issues, 'missing-rule-ref', rulePath, `Missing rule ref "${ruleRef}".`);
         continue;
       }
 
@@ -115,7 +118,7 @@ const validateEntryRefs = (
             issues,
             'rule-action-unavailable',
             actionPath,
-            `Rule "${step.ref}" may return "${actionName}", which is unavailable from stage "${stageName}".`,
+            `Rule "${ruleRef}" may return "${actionName}", which is unavailable from stage "${stageName}".`,
           );
           continue;
         }
@@ -125,7 +128,7 @@ const validateEntryRefs = (
             issues,
             'rule-action-not-system',
             actionPath,
-            `Rule "${step.ref}" may return human action "${actionName}". Rules may target only system actions.`,
+            `Rule "${ruleRef}" may return human action "${actionName}". Rules may target only system actions.`,
           );
         }
       }
