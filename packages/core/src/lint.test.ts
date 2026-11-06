@@ -193,6 +193,35 @@ describe('lintInterpreterFlow', () => {
   });
 });
 
+describe('orchestrate lint', () => {
+  test('warns on an orchestrate stage that has no SLA but not on one that does', () => {
+    const definition = defineFlow({
+      id: 'orchestrate-lint',
+      version: 1,
+      roles: ['ops'],
+      initialStage: 'unbounded',
+      stages: {
+        unbounded: {
+          steady: true,
+          entry: [{ kind: 'orchestrate', ref: 'build', gate: 'human' }],
+          actions: { next: { to: 'bounded', kind: 'system' } },
+        },
+        bounded: {
+          steady: true,
+          sla: { after: '1h', escalate: { notify: 'ops' } },
+          entry: [{ kind: 'orchestrate', ref: 'build', gate: 'human' }],
+          actions: { finish: { to: 'done', kind: 'system' } },
+        },
+        done: { final: true },
+      },
+    } as any);
+
+    expect(lintFlow(definition).filter((issue) => issue.code === 'orchestrate-without-sla')).toEqual([
+      expect.objectContaining({ path: 'stages.unbounded', severity: 'warning' }),
+    ]);
+  });
+});
+
 describe('validateRegistryRefs', () => {
   test('reports missing named refs without executing them', () => {
     const definition = defineFlow({

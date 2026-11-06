@@ -220,7 +220,7 @@ describe('flowSchema', () => {
     });
   });
 
-  test('rejects an AI step without a human gate', () => {
+  test('rejects an AI step without a gate', () => {
     const d = validDefinition();
     expectInvalid({
       ...d,
@@ -245,6 +245,51 @@ describe('flowSchema', () => {
     };
 
     expect(flowSchema.safeParse(definition).success).toBe(true);
+  });
+
+  describe('orchestrate step', () => {
+    const withEntry = (entry: unknown[]) => {
+      const d = validDefinition();
+      return { ...d, stages: { ...d.stages, draft: { ...d.stages.draft, entry } } };
+    };
+
+    test('accepts a human-gated and an auto-gated orchestrate step', () => {
+      expect(flowSchema.safeParse(withEntry([{ kind: 'orchestrate', ref: 'build', gate: 'human' }])).success).toBe(true);
+      expect(flowSchema.safeParse(withEntry([{ kind: 'orchestrate', ref: 'build', gate: 'auto', decide: 'clean' }])).success).toBe(true);
+    });
+
+    test.each([
+      ['no gate', [{ kind: 'orchestrate', ref: 'build' }]],
+      ['gate auto without decide', [{ kind: 'orchestrate', ref: 'build', gate: 'auto' }]],
+      ['decide with a human gate', [{ kind: 'orchestrate', ref: 'build', gate: 'human', decide: 'clean' }]],
+      ['two orchestrate steps in one stage', [
+        { kind: 'orchestrate', ref: 'a', gate: 'human' },
+        { kind: 'orchestrate', ref: 'b', gate: 'human' },
+      ]],
+    ])('rejects %s', (_name: string, entry: unknown[]) => {
+      expectInvalid(withEntry(entry));
+    });
+  });
+
+  describe('auto gate', () => {
+    const withEntry = (step: unknown) => {
+      const d = validDefinition();
+      return { ...d, stages: { ...d.stages, draft: { ...d.stages.draft, entry: [step] } } };
+    };
+
+    test('accepts an AI step with gate "auto" and a deciding rule', () => {
+      expect(flowSchema.safeParse(withEntry({ kind: 'ai', ref: 'assess', gate: 'auto', decide: 'lowRisk' })).success).toBe(true);
+    });
+
+    test.each([
+      ['no decide', { kind: 'ai', ref: 'assess', gate: 'auto' }],
+      ['decide with a human gate', { kind: 'ai', ref: 'assess', gate: 'human', decide: 'lowRisk' }],
+      ['decide on a rule step', { kind: 'rule', ref: 'autoApprove', decide: 'lowRisk' }],
+      ['an unknown gate mode', { kind: 'ai', ref: 'assess', gate: 'maybe' }],
+      ['gate auto on a system step', { kind: 'system', ref: 'prepare', gate: 'auto', decide: 'lowRisk' }],
+    ])('rejects %s', (_name: string, step: unknown) => {
+      expectInvalid(withEntry(step));
+    });
   });
 
   test.each([

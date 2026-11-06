@@ -73,9 +73,28 @@ Each entry step (`StepDef`):
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `kind` | `system` \| `ai` \| `rule` | Step kind. |
+| `kind` | `system` \| `ai` \| `rule` \| `orchestrate` | Step kind. |
 | `ref` | string | Name resolved from the consumer registry at runtime. This is the escape hatch: logic that cannot be serialised stays in code. |
-| `gate` | `human` | Only valid on `ai` steps, and required there: AI output is recorded for a human to act on rather than transitioning automatically. |
+| `gate` | `human` \| `auto` | Only valid on `ai` and `orchestrate` steps, and required there. `human`: AI output is recorded for a person to act on. `auto`: the named `decide` rule may fire a system action from the output (see below). |
+| `decide` | string | Required with `gate: auto`, rejected otherwise. Name of a rule in the consumer's `rules` registry. |
+
+**Auto gates.** `gate: auto` lets an AI step release its stage without a person, but only through a
+rule the consumer wrote and registered. After the AI step completes, the rule runs with the step's
+output (`gatedOutput`) and the accumulated entry facts. If it returns a system action name, that action
+is fired as a `rule`-origin command with operation id `gate:<epoch>:<index>`; the step result records
+`gateDecision: { outcome: 'auto', action }`. In every other case the stage waits for a human exactly as
+with `gate: human`: the rule returned nothing, the rule threw, the rule is not registered, or the AI
+step degraded (`degraded_to_human`). `validateFlowkit` requires the `decide` rule to be registered and
+to name only system actions available from the stage. Auto-fired actions still go through the action's
+guards and count toward `maxAutomaticTransitionsPerTurn`. Because an undecided auto gate falls back to a
+human, the stage still needs an SLA, a `steady` marker or a rule to satisfy `lintFlow`.
+
+```yaml
+entry:
+  - { kind: ai, ref: assessChange, gate: auto, decide: lowRiskAutoApprove }
+actions:
+  proceed: { to: implement, kind: system, guards: [withinBudget] }
+  approve: { to: implement, kind: human, policy: reviewerCanApprove }   # fallback when not auto-released
 
 Notifications (`NotificationDef`):
 
@@ -97,7 +116,40 @@ Tracks and SLAs:
 
 ## 3. Complete example
 
+```
+
+**Orchestrate steps.** `kind: orchestrate` runs a chief-of-staff orchestrator: a plan activity returns a
+bounded list of subagent tasks, one activity per task runs in parallel under a concurrency cap, and a
+synthesize activity merges the results. The step requires `gate` exactly as an `ai` step does, so its
+output never transitions the flow by itself; with `gate: auto` the `decide` rule additionally receives
+`tasks` (the final status of every subagent) alongside `gatedOutput`. A stage may declare at most one
+`orchestrate` step.
+
 ```yaml
+entry:
+  - { kind: orchestrate, ref: buildFeature, gate: auto, decide: allSubagentsClean }
+```
+
+The orchestration runs **in the background**: stage entry starts it and returns at once, so the stage's
+SLA is armed and human actions and signals are handled while subagents work. The update that caused the
+stage entry returns when the orchestration has *started*, not finished. Because of that, a later `rule`
+step in the same entry does not see the orchestrator's output; only its `decide` rule does.
+
+- Limits (`maxTasks`, `maxConcurrency`, `failFast`, `maxOutputBytes`, activity options) belong to the
+  consumer's `orchestrators` registration, never to the definition. Defaults are 16 tasks, concurrency 4,
+  `failFast: false`, and 65536 bytes of output; tasks and concurrency are capped at 64.
+- A plan that names an agent outside the registration's `agents`, repeats a task id, exceeds `maxTasks`,
+  or fails, a failed synthesis, and an oversized output all set the step to `degraded_to_human`.
+- One failed subagent does not stop the others unless `failFast` is set; synthesis still runs and
+  `decide` sees the failed status, so it can refuse to release.
+- If the stage changes first (a human action, a signal, an SLA escalation), the orchestration is
+  cancelled, its step result becomes `superseded`, and its late results are discarded.
+- A releasing action is enqueued as a `rule`-origin command with operation id `orch:<epoch>:<index>` and
+  goes through the same guards, context resolution and projection as any other transition.
+- `continueAsNew` is deferred while an orchestration is running. Activity idempotency keys are
+  `[workflowId, entryEpoch, stepIndex, phase]`, with phase `"plan"`, `"synthesize"`, or `"task", taskId`.
+- `lintFlow` warns (`orchestrate-without-sla`) when a stage with an `orchestrate` step has no SLA.
+yaml
 id: sample-onboarding
 version: 2
 roles: [applicant, reviewer, supervisor]
@@ -174,7 +226,7 @@ row states what is enforced, not what is advisable.
 | --- | --- | --- |
 | YAML loader (`parseFlowYaml` / `loadFlowFile`) | Everything listed in §1: document count, key and tag rules, the version spelling, the byte cap, the alias limit, then everything `flowSchema` rejects. | Anything needing a consumer registry, and the graph checks below. |
 | JSON Schema (`schema/flowdefinition.schema.json`) | Unknown fields, wrong types, wrong enum values, missing top-level keys. Usable from any editor or CI step. | Anything requiring cross-field logic; see below. |
-| `defineFlow` (Zod `flowSchema`) | Everything the schema catches, plus refinements such as "an AI step must declare `gate: human`, and only AI steps may declare a gate". | Whether `ref`s, policies, guards, templates, and channels actually resolve. |
+| `defineFlow` (Zod `flowSchema`) | Everything the schema catches, plus refinements such as "an AI step must declare `gate` (`human` or `auto`), `gate: auto` requires `decide` and `decide` requires `gate: auto`, and only AI steps may declare a gate". | Whether `ref`s, policies, guards, templates, and channels actually resolve. |
 | `lintFlow` / `lintInterpreterFlow` (`@naakwu/flowkit-core`) | Graph and wiring problems: unreachable stages, dead ends, actions on final stages, human actions without a policy, stages with no SLA, rule, or steady marker. | Whether a referenced name exists in a consumer registry. |
 | `validateFlowkit` (`@naakwu/flowkit-temporal`) | Everything above plus declared-ref validation against consumer registries, and SLA duration syntax. This is the boot gate a worker should run before accepting work. | Runtime behaviour of the resolved handlers. |
 
@@ -437,6 +489,7 @@ never invokes a handler.
 | `rules` | `rule` step `ref` (also needs an `actions` list, see below). |
 | `systemSteps` | `system` step `ref`. |
 | `aiSteps` | `ai` step `ref`. |
+| `orchestrators` | `orchestrate` step `ref` (also needs an `agents` list and may declare `maxTasks`, `maxConcurrency`, `failFast`, `maxOutputBytes`). |
 | `templates` | Notification `template`. |
 | `channels` | Notification `channels`. |
 
@@ -450,6 +503,8 @@ systemSteps:
   prepare: {}
 aiSteps:
   summarize: {}
+orchestrators:
+  buildFeature: { agents: [coder, tester], maxTasks: 8 }
 guards:
   sla_expired: {}
 templates:

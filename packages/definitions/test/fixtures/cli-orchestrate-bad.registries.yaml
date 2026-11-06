@@ -1,0 +1,10 @@
+# Orchestrator with no agents and an out-of-range limit.
+policies:
+  reviewer_can_approve: {}
+rules:
+  all_clean:
+    actions: [proceed]
+orchestrators:
+  build_feature:
+    agents: []
+    maxConcurrency: 99

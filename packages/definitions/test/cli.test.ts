@@ -67,6 +67,40 @@ describe('flowkit definitions validate', () => {
     expect(stdout).not.toContain('Skipped:');
   });
 
+  test('validates orchestrate steps against an orchestrators section', async () => {
+    const { code, stdout } = await runCli([
+      'definitions',
+      'validate',
+      'test/fixtures/cli-orchestrate.yaml',
+      '--registries',
+      'test/fixtures/cli-orchestrate.registries.yaml',
+    ]);
+
+    expect(code).toBe(0);
+    expect(stdout).toContain('1 definition file(s) valid.');
+  });
+
+  test('reports an orchestrator that declares no agents or an invalid limit', async () => {
+    const { code, stdout } = await runCli([
+      'definitions',
+      'validate',
+      'test/fixtures/cli-orchestrate.yaml',
+      '--registries',
+      'test/fixtures/cli-orchestrate-bad.registries.yaml',
+    ]);
+
+    expect(code).toBe(1);
+    expect(stdout).toContain('orchestrator-agents-empty');
+    expect(stdout).toContain('orchestrator-limit-invalid');
+  });
+
+  test('does not report missing orchestrators when no manifest is supplied', async () => {
+    const { code, stdout } = await runCli(['definitions', 'validate', 'test/fixtures/cli-orchestrate.yaml']);
+
+    expect(code).toBe(0);
+    expect(stdout).toContain('Skipped:');
+  });
+
   test('states which checks were skipped when no manifest is supplied', async () => {
     const { code, stdout } = await runCli([
       'definitions',

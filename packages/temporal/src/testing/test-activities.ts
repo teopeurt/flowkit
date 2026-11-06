@@ -1,11 +1,46 @@
 import type {
   FlowkitActivityRegistry,
+  FlowkitOrchestrationActivities,
+  OrchestrationTask,
   RecordTransitionInput,
   ResolvedActionContext,
 } from '../contracts';
 import { ApplicationFailure } from '@temporalio/common';
 
-export const testActivities: FlowkitActivityRegistry & {
+/** Knobs and observations for the orchestration activities. Reset by `testActivities.reset()`. */
+export interface OrchestrationControls {
+  plan: OrchestrationTask[];
+  subagentMs: number;
+  /** Per-task override of `subagentMs`. */
+  taskMs: Record<string, number>;
+  failTasks: string[];
+  failPlan: boolean;
+  failSynthesize: boolean;
+  bigOutput: boolean;
+  planCalls: number;
+  started: string[];
+  active: number;
+  maxActive: number;
+  synthesized: Array<Array<{ id: string; status: string }>>;
+}
+
+const freshOrchestration = (): OrchestrationControls => ({
+  plan: [],
+  subagentMs: 50,
+  taskMs: {},
+  failTasks: [],
+  failPlan: false,
+  failSynthesize: false,
+  bigOutput: false,
+  planCalls: 0,
+  started: [],
+  active: 0,
+  maxActive: 0,
+  synthesized: [],
+});
+
+export const testActivities: FlowkitActivityRegistry & FlowkitOrchestrationActivities & {
+  orchestration: OrchestrationControls;
   transitions: RecordTransitionInput[];
   resolvedCommands: Array<{ origin: string; actorId?: string }>;
   failNextProjection: boolean;
@@ -26,6 +61,7 @@ export const testActivities: FlowkitActivityRegistry & {
   waitForStageReady(): Promise<void>;
   unblockProjection(): void;
 } = {
+  orchestration: freshOrchestration(),
   transitions: [],
   resolvedCommands: [],
   failNextProjection: false,
@@ -53,6 +89,7 @@ export const testActivities: FlowkitActivityRegistry & {
     this.releaseProjection = undefined;
     this.projectionStarted = undefined;
     this.priorResult = undefined;
+    this.orchestration = freshOrchestration();
   },
   waitForProjection() {
     return new Promise((resolve) => { this.projectionStarted = resolve; });
@@ -106,6 +143,33 @@ export const testActivities: FlowkitActivityRegistry & {
     testActivities.aiSteps.push(input.ref);
     if (testActivities.failAi) throw ApplicationFailure.nonRetryable('AI unavailable', 'TEST_AI_FAILURE');
     return { output: `ai:${input.ref}` };
+  },
+  async planOrchestration() {
+    const controls = testActivities.orchestration;
+    controls.planCalls += 1;
+    if (controls.failPlan) throw ApplicationFailure.nonRetryable('plan unavailable', 'TEST_PLAN_FAILURE');
+    return { tasks: controls.plan.map((task) => ({ ...task })) };
+  },
+  async runSubagent(input) {
+    const controls = testActivities.orchestration;
+    controls.started.push(input.taskId);
+    controls.active += 1;
+    controls.maxActive = Math.max(controls.maxActive, controls.active);
+    try {
+      await new Promise<void>((resolve) => setTimeout(resolve, controls.taskMs[input.taskId] ?? controls.subagentMs));
+      if (controls.failTasks.includes(input.taskId)) {
+        throw ApplicationFailure.nonRetryable(`subagent ${input.taskId} failed`, 'TEST_SUBAGENT_FAILURE');
+      }
+      return { output: `done:${input.taskId}` };
+    } finally {
+      controls.active -= 1;
+    }
+  },
+  async synthesizeOrchestration(input) {
+    const controls = testActivities.orchestration;
+    controls.synthesized.push(input.results.map(({ id, status }) => ({ id, status })));
+    if (controls.failSynthesize) throw ApplicationFailure.nonRetryable('synthesis unavailable', 'TEST_SYNTH_FAILURE');
+    return { output: controls.bigOutput ? { blob: 'x'.repeat(200) } : { merged: input.results.length } };
   },
   async dispatchNotification(input) {
     testActivities.notifications.push(input.operationKey);

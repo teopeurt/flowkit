@@ -177,7 +177,8 @@
                   "enum": [
                     "system",
                     "ai",
-                    "rule"
+                    "rule",
+                    "orchestrate"
                   ]
                 },
                 "ref": {
@@ -185,7 +186,13 @@
                 },
                 "gate": {
                   "type": "string",
-                  "const": "human"
+                  "enum": [
+                    "human",
+                    "auto"
+                  ]
+                },
+                "decide": {
+                  "type": "string"
                 }
               },
               "required": [

@@ -200,3 +200,109 @@ export const actionSlaInput = (): FlowkitWorkflowInput => ({ published: publishD
 const continuationInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: slaRegistries, shouldContinueAsNew: () => true });
 export async function continuationWorkflow(input: FlowkitWorkflowInput) { return await continuationInterpreter(input); }
 export const continuationInput = (): FlowkitWorkflowInput => ({ published: publishDefinition({ definition: slaDefinition({ notify: 'reminder' }) }), subject: { id: 'continuation', organizationId: 'org-1' } });
+
+const autoGateDefinition: FlowDefinition = {
+  id: 'auto-gate-flow', version: 1, roles: ['reviewer'], initialStage: 'plan',
+  stages: {
+    plan: {
+      pendingRole: 'reviewer',
+      steady: true,
+      entry: [{ kind: 'ai', ref: 'assess', gate: 'auto', decide: 'lowRisk' }],
+      actions: {
+        proceed: { to: 'done', kind: 'system' },
+        approve: { to: 'done', policy: 'reviewerOnly' },
+      },
+    },
+    done: { final: true },
+  },
+};
+const autoGateRegistries = (decide: (gatedOutput: unknown) => string | undefined) => ({
+  policies: { reviewerOnly: (context: { actor?: { roles: string[] } }) => context.actor?.roles.includes('reviewer') ?? false },
+  rules: { lowRisk: { actions: ['proceed'], run: (context: { gatedOutput?: unknown }) => decide(context.gatedOutput) } },
+});
+const autoGateReleaseInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: autoGateRegistries((output) => (output === 'ai:assess' ? 'proceed' : undefined)) });
+const autoGateDeclineInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: autoGateRegistries(() => undefined) });
+const autoGateThrowInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: autoGateRegistries(() => { throw new Error('rule exploded'); }) });
+export async function autoGateReleaseWorkflow(input: FlowkitWorkflowInput) { return await autoGateReleaseInterpreter(input); }
+export async function autoGateDeclineWorkflow(input: FlowkitWorkflowInput) { return await autoGateDeclineInterpreter(input); }
+export async function autoGateThrowWorkflow(input: FlowkitWorkflowInput) { return await autoGateThrowInterpreter(input); }
+export const autoGateInput = (): FlowkitWorkflowInput => ({ published: publishDefinition({ definition: autoGateDefinition }), subject: { id: 'auto-gate-1', organizationId: 'org-1' } });
+
+/* ------------------------------------------------------------------------ */
+/* Orchestrate step fixtures                                                  */
+/* ------------------------------------------------------------------------ */
+
+const orchestrateDefinition = (ref: string, options: { sla?: boolean; gate?: 'auto' | 'human' } = {}): FlowDefinition => ({
+  id: `orchestrate-${ref}`, version: 1, roles: ['manager'], initialStage: 'work',
+  stages: {
+    work: {
+      pendingRole: 'manager',
+      steady: true,
+      ...(options.sla ? { sla: { after: '1s', escalate: { notify: 'manager', action: 'escalate' } } } : {}),
+      entry: [options.gate === 'human'
+        ? { kind: 'orchestrate', ref, gate: 'human' }
+        : { kind: 'orchestrate', ref, gate: 'auto', decide: 'allClean' }],
+      actions: {
+        proceed: { to: 'done', kind: 'system', guards: ['released'] },
+        escalate: { to: 'done', kind: 'system' },
+        approve: { to: 'done', policy: 'managerOnly' },
+        revisit: { to: 'work', policy: 'anyone' },
+      },
+    },
+    done: { final: true },
+  },
+});
+
+const orchestratorRegistry = {
+  build: { agents: ['coder', 'tester'], maxTasks: 3, maxConcurrency: 2, activityOptions: { startToCloseTimeout: '30 seconds', retry: { maximumAttempts: 1 } } },
+  failfast: { agents: ['coder', 'tester'], maxTasks: 4, maxConcurrency: 4, failFast: true, activityOptions: { startToCloseTimeout: '30 seconds', retry: { maximumAttempts: 1 } } },
+  tiny: { agents: ['coder'], maxOutputBytes: 64, activityOptions: { startToCloseTimeout: '30 seconds', retry: { maximumAttempts: 1 } } },
+};
+
+const orchestrationRegistries = (released: boolean) => ({
+  policies: { managerOnly: (context: { actor?: { roles: string[] } }) => context.actor?.roles.includes('manager') ?? false, anyone: () => true },
+  guards: { released: () => released },
+  rules: {
+    allClean: {
+      actions: ['proceed'],
+      run: (context: { tasks?: ReadonlyArray<{ status: string }> }) =>
+        context.tasks !== undefined && context.tasks.length > 0 && context.tasks.every((task) => task.status === 'completed') ? 'proceed' : undefined,
+    },
+  },
+  orchestrators: orchestratorRegistry,
+});
+
+const orchestrateInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: orchestrationRegistries(true) });
+const orchestrateBlockedInterpreter = createFlowkitWorkflow({ activityTaskQueue: 'flowkit-temporal-workflow-test', registries: orchestrationRegistries(false) });
+export async function orchestrateWorkflow(input: FlowkitWorkflowInput) { return await orchestrateInterpreter(input); }
+export async function orchestrateBlockedWorkflow(input: FlowkitWorkflowInput) { return await orchestrateBlockedInterpreter(input); }
+export const orchestrateInput = (ref = 'build', options: { sla?: boolean; gate?: 'auto' | 'human' } = {}): FlowkitWorkflowInput => ({
+  published: publishDefinition({ definition: orchestrateDefinition(ref, options) }),
+  subject: { id: `orchestrate-${ref}`, organizationId: 'org-1' },
+});
+
+/** intake -> work (orchestrate) -> closed -> done, with Continue-As-New always requested. */
+const continueDefinition: FlowDefinition = {
+  id: 'orchestrate-continue', version: 1, roles: ['manager'], initialStage: 'intake',
+  stages: {
+    intake: { pendingRole: 'manager', steady: true, actions: { go: { to: 'work', policy: 'anyone' } } },
+    work: {
+      pendingRole: 'manager',
+      steady: true,
+      entry: [{ kind: 'orchestrate', ref: 'build', gate: 'human' }],
+      actions: { finish: { to: 'closed', policy: 'anyone' } },
+    },
+    closed: { pendingRole: 'manager', steady: true, actions: { close: { to: 'done', policy: 'anyone' } } },
+    done: { final: true },
+  },
+};
+const orchestrateContinueInterpreter = createFlowkitWorkflow({
+  activityTaskQueue: 'flowkit-temporal-workflow-test',
+  registries: orchestrationRegistries(true),
+  shouldContinueAsNew: () => true,
+});
+export async function orchestrateContinueWorkflow(input: FlowkitWorkflowInput) { return await orchestrateContinueInterpreter(input); }
+export const orchestrateContinueInput = (): FlowkitWorkflowInput => ({
+  published: publishDefinition({ definition: continueDefinition }),
+  subject: { id: 'orchestrate-continue-1', organizationId: 'org-1' },
+});

@@ -310,3 +310,86 @@ describe('validateFlowkit', () => {
     expect(codes(issues)).toContainEqual('final-stage-schedules-work');
   });
 });
+
+describe('auto-gated AI step validation', () => {
+  const autoGated = (): FlowDefinition => {
+    const d = definition();
+    d.stages.draft.entry = [{ kind: 'ai', ref: 'summarize', gate: 'auto', decide: 'lowRisk' }];
+    d.stages.draft.actions = { ...d.stages.draft.actions, proceed: { to: 'review', kind: 'system' } };
+    return d;
+  };
+  const withRule = (actions: string[]) => ({
+    ...registries(),
+    rules: { ...registries().rules, lowRisk: { run: () => undefined, actions } },
+  });
+  const validate = (reg: ReturnType<typeof withRule> | ReturnType<typeof registries>) =>
+    validateFlowkit({ published: publishDefinition({ definition: autoGated() }), registries: reg });
+
+  test('accepts an auto gate whose deciding rule only targets available system actions', () => {
+    expect(validate(withRule(['proceed']))).toEqual([]);
+  });
+
+  test('reports a deciding rule that is not registered', () => {
+    expect(validate(registries())).toContainEqual(
+      expect.objectContaining({ code: 'missing-rule-ref', path: 'stages.draft.entry.0.decide' }),
+    );
+  });
+
+  test('rejects a deciding rule that may return a human action', () => {
+    expect(codes(validate(withRule(['submit'])))).toContainEqual('rule-action-not-system');
+  });
+
+  test('rejects a deciding rule that may return an action the stage does not have', () => {
+    expect(codes(validate(withRule(['nope'])))).toContainEqual('rule-action-unavailable');
+  });
+});
+
+describe('orchestrate step validation', () => {
+  const orchestrated = (gate: 'human' | 'auto' = 'human'): FlowDefinition => {
+    const d = definition();
+    d.stages.draft.entry = [
+      gate === 'auto'
+        ? { kind: 'orchestrate', ref: 'build', gate: 'auto', decide: 'allClean' }
+        : { kind: 'orchestrate', ref: 'build', gate: 'human' },
+    ];
+    d.stages.draft.actions = { ...d.stages.draft.actions, proceed: { to: 'review', kind: 'system' } };
+    return d;
+  };
+  const withOrchestrator = (registration: unknown, rule = true) => ({
+    ...registries(),
+    rules: { ...registries().rules, ...(rule ? { allClean: { run: () => undefined, actions: ['proceed'] } } : {}) },
+    orchestrators: { build: registration },
+  });
+  const validate = (definitionToCheck: FlowDefinition, reg: unknown) =>
+    validateFlowkit({ published: publishDefinition({ definition: definitionToCheck }), registries: reg as never });
+  const good = { agents: ['coder', 'tester'], maxTasks: 8, maxConcurrency: 2 };
+
+  test('accepts a registered orchestrator whose limits are valid, including an auto gate rule', () => {
+    expect(validate(orchestrated('human'), withOrchestrator(good))).toEqual([]);
+    expect(validate(orchestrated('auto'), withOrchestrator(good))).toEqual([]);
+  });
+
+  test('reports an orchestrator that is not registered', () => {
+    expect(codes(validate(orchestrated(), registries()))).toContainEqual('missing-orchestrator-ref');
+  });
+
+  test('reports an orchestrator with no agents', () => {
+    expect(codes(validate(orchestrated(), withOrchestrator({ agents: [] })))).toContainEqual('orchestrator-agents-empty');
+  });
+
+  test.each([
+    ['zero maxTasks', { agents: ['a'], maxTasks: 0 }],
+    ['maxTasks above the hard limit', { agents: ['a'], maxTasks: 65 }],
+    ['fractional maxConcurrency', { agents: ['a'], maxConcurrency: 1.5 }],
+    ['maxConcurrency above the hard limit', { agents: ['a'], maxConcurrency: 65 }],
+    ['zero maxOutputBytes', { agents: ['a'], maxOutputBytes: 0 }],
+  ])('reports %s', (_name: string, registration: unknown) => {
+    expect(codes(validate(orchestrated(), withOrchestrator(registration)))).toContainEqual('orchestrator-limit-invalid');
+  });
+
+  test('applies the deciding-rule checks to an auto-gated orchestrate step', () => {
+    expect(validate(orchestrated('auto'), withOrchestrator(good, false))).toContainEqual(
+      expect.objectContaining({ code: 'missing-rule-ref', path: 'stages.draft.entry.0.decide' }),
+    );
+  });
+});
