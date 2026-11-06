@@ -31,6 +31,7 @@ import type { FlowkitValidationIssue, FlowkitValidationRegistries } from '@teope
 
 import { FlowDefinitionYamlError, locateYamlPath, parseYamlWithStructure, splitYamlPath } from './yaml';
 import type { ParsedFlowYaml } from './yaml';
+import { FLOWKIT_DEFINITIONS_VERSION } from './index';
 
 /* -------------------------------------------------------------------------- */
 /* Exit codes                                                                  */
@@ -57,6 +58,7 @@ const USAGE = `Usage: flowkit definitions validate <glob-or-path>... [--registri
                         as-is. Symbolic links are followed.
   --registries <file>   YAML or JSON manifest of declared refs; enables ref validation.
   --json                Emit one JSON document on stdout, including for fatal errors.
+  --hash                Print the sha256 definition hash before the summary.
 
 Exit codes:
   0   every definition is valid
@@ -545,12 +547,14 @@ interface FileResult {
   path: string;
   kind: FileKind;
   issues: ReportedIssue[];
+  hash: string | null;
   message?: string;
 }
 
 interface ParsedArgs {
   globs: string[];
   registries?: string;
+  hash: boolean;
 }
 
 /** Test seams. Production uses the defaults. */
@@ -561,7 +565,22 @@ export interface ValidateDeps {
   stderr: (text: string) => void;
 }
 
+const HELP_USAGE = `Usage: flowkit definitions validate <glob-or-path>... [--registries <file>] [--json] [--hash]\n\n${USAGE}`;
+
 const usage = (message: string): CliFatal => new CliFatal(EXIT_USAGE, 'usage', message, true);
+
+export const printHelpOrVersion = (argv: readonly string[], stdout: (text: string) => void): boolean => {
+  if (argv.length === 1 && ['--version', '-v', '-V'].includes(argv[0])) {
+    stdout(`@teopeurt/flowkit-definitions ${FLOWKIT_DEFINITIONS_VERSION}\n`);
+    return true;
+  }
+  const help = argv.includes('--help') || argv.includes('-h');
+  if (help && (argv.length === 1 || argv[0] === 'definitions' || (argv[0] === 'definitions' && argv[1] === 'validate'))) {
+    stdout(`${argv.length === 1 ? HELP_USAGE : USAGE}\n`);
+    return true;
+  }
+  return false;
+};
 
 const parseArgs = (argv: readonly string[]): ParsedArgs => {
   if (argv[0] !== 'definitions' || argv[1] !== 'validate') {
@@ -571,11 +590,17 @@ const parseArgs = (argv: readonly string[]): ParsedArgs => {
   const args = argv.slice(2);
   const globs: string[] = [];
   let registries: string | undefined;
+  let hash = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
 
     if (arg === '--json') {
+      continue;
+    }
+
+    if (arg === '--hash') {
+      hash = true;
       continue;
     }
 
@@ -612,7 +637,7 @@ const parseArgs = (argv: readonly string[]): ParsedArgs => {
     throw usage('A definition file glob is required.');
   }
 
-  return { globs, registries };
+  return { globs, registries, hash };
 };
 
 const loadManifest = async (manifestPath: string): Promise<FlowkitValidationRegistries> => {
@@ -675,19 +700,19 @@ const validateSource = (
   file: string,
   registries: FlowkitValidationRegistries | undefined,
   deps: ValidateDeps,
-): ReportedIssue[] => {
+): { issues: ReportedIssue[]; hash: string | null } => {
   let parsed: ParsedFlowYaml;
   try {
     parsed = parseYamlWithStructure(source, file);
   } catch (error) {
     if (error instanceof FlowDefinitionYamlError) {
-      return error.issues.map((issue) => ({
+      return { issues: error.issues.map((issue) => ({
         path: issue.path,
         line: issue.line,
         column: issue.column,
         code: 'yaml-error',
         message: issue.message,
-      }));
+      })), hash: null };
     }
     throw error;
   }
@@ -699,7 +724,7 @@ const validateSource = (
         (issue) => !REGISTRY_DEPENDENT_CODES.has(issue.code),
       );
 
-  return issues.map((issue) => {
+  return { issues: issues.map((issue) => {
     const location = locateYamlPath(parsed.structure, splitYamlPath(issue.path));
     return {
       path: issue.path,
@@ -708,7 +733,7 @@ const validateSource = (
       code: issue.code,
       message: issue.message,
     };
-  });
+  }), hash: published.definitionHash };
 };
 
 /** One file. Any unexpected exception is recorded for this file and the run continues. */
@@ -724,17 +749,19 @@ const validateFile = async (
         path: file,
         kind: 'unreadable',
         issues: [],
+        hash: null,
         message: `Cannot read definition file "${file}": ${read.failure}`,
       };
     }
 
-    const issues = validateSource(read.source, file, registries, deps);
-    return { path: file, kind: issues.length === 0 ? 'valid' : 'invalid', issues };
+    const validated = validateSource(read.source, file, registries, deps);
+    return { path: file, kind: validated.issues.length === 0 ? 'valid' : 'invalid', issues: validated.issues, hash: validated.hash };
   } catch (error) {
     return {
       path: file,
       kind: 'internal-error',
       issues: [],
+      hash: null,
       message: `Internal error validating "${file}": ${describeError(error)}`,
     };
   }
@@ -818,6 +845,7 @@ const execute = async (
       path,
       kind: 'unreadable' as const,
       issues: [],
+      hash: null,
       message,
     })),
   ];
@@ -841,6 +869,7 @@ const execute = async (
           files: results.map((result) => ({
             path: result.path,
             kind: result.kind,
+            hash: result.hash,
             issues: result.issues.map((issue) => ({
               path: issue.path,
               line: issue.line ?? null,
@@ -859,6 +888,10 @@ const execute = async (
     for (const result of results) {
       if (results.length > 1) {
         deps.stdout(`# ${result.path}\n`);
+      }
+
+      if (result.hash !== null && parsed.hash) {
+        deps.stdout(`${result.hash}  ${result.path}\n`);
       }
 
       for (const issue of result.issues) {

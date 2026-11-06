@@ -185,6 +185,30 @@ describe('flowkit definitions validate', () => {
     }
   });
 
+  test('prints help and version for top-level and definitions commands', async () => {
+    for (const args of [['--help'], ['-h'], ['definitions', '--help'], ['definitions', 'validate', '--help'], ['definitions', 'validate', '-h']]) {
+      const result = await runCli(args);
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('Usage:');
+      expect(result.stderr).toBe('');
+    }
+    for (const args of [['--version'], ['-v'], ['-V']]) {
+      const result = await runCli(args);
+      expect(result.code).toBe(0);
+      expect(result.stdout.trim()).toBe('@teopeurt/flowkit-definitions 1.1.0');
+      expect(result.stderr).toBe('');
+    }
+  });
+
+  test('prints the published definition hash and includes it in JSON', async () => {
+    const text = await runCli(['definitions', 'validate', 'test/fixtures/cli-clean.yaml', '--hash']);
+    expect(text.code).toBe(0);
+    expect(text.stdout).toMatch(/sha256:[0-9a-f]{64}  .*test\/fixtures\/cli-clean\.yaml/);
+    const json = await runCli(['definitions', 'validate', 'test/fixtures/cli-clean.yaml', '--json']);
+    const document = JSON.parse(json.stdout) as { files: Array<{ hash: string }> };
+    expect(document.files[0].hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+
   test('exits 2 with usage for an unknown subcommand', async () => {
     const { code, stderr } = await runCli(['definitions', 'unknown']);
     expect(code).toBe(2);
