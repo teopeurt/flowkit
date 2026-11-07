@@ -1,5 +1,16 @@
 # @teopeurt/flowkit-definitions
 
+## 1.2.0
+
+### Minor Changes
+
+- a2e10f1: Add CLI help/version flags, deterministic definition hashes, hash fields in JSON output, relative paths in CLI output, and a runnable author quickstart with tokenless npm and GitHub Actions guidance.
+
+### Patch Changes
+
+- @teopeurt/flowkit-core@1.2.0
+  - @teopeurt/flowkit-temporal@1.2.0
+
 ## 1.1.1
 
 ### Patch Changes

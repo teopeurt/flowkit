@@ -1,5 +1,12 @@
 # @teopeurt/flowkit-temporal
 
+## 1.2.0
+
+### Patch Changes
+
+- @teopeurt/flowkit-consumer@1.2.0
+  - @teopeurt/flowkit-core@1.2.0
+
 ## 1.1.1
 
 ### Patch Changes

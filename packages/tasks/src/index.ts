@@ -1,4 +1,4 @@
-export const FLOWKIT_TASKS_VERSION = '1.1.1';
+export const FLOWKIT_TASKS_VERSION = '1.2.0';
 export * from './contracts.js';
 export * from './errors.js';
 export * from './schema.js';
