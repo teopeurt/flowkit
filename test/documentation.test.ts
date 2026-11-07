@@ -79,6 +79,25 @@ describe('public documentation contract', () => {
     for (const document of documents) expect(document).not.toMatch(tokenPattern);
   });
 
+  test('documents the tokenless npm install and the next-release CLI flags', async () => {
+    const quickstart = await readDocumentation('docs/cli-quickstart.md');
+
+    expect(quickstart).toContain('npmjs.org');
+    expect(quickstart).toContain('needs no token');
+    expect(quickstart).toContain('npm install --save-dev @teopeurt/flowkit-definitions');
+    expect(quickstart).toContain('bun add -d @teopeurt/flowkit-definitions');
+    expect(quickstart).toContain('npx flowkit');
+    expect(quickstart).toContain('bunx flowkit');
+    expect(quickstart).toContain('--help');
+    expect(quickstart).toContain('--version');
+    expect(quickstart).toContain('--hash');
+    expect(quickstart).toContain('1.2.0 or later');
+    expect(quickstart).toContain('1.1.1');
+    expect(quickstart).not.toContain('/home/');
+    expect(quickstart).not.toContain('appadmin');
+    expect(quickstart).not.toContain('/tmp/');
+  });
+
   test('names every published package in the root README', async () => {
     const rootReadme = await readDocumentation('README.md');
     const packageDirectories = await readdir(join(repositoryRoot, 'packages'), { withFileTypes: true });

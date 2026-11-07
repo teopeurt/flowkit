@@ -2,6 +2,36 @@
 
 # @teopeurt/flowkit-definitions
 
+## Install
+
+The package is published on the public npm registry at [npmjs.org](https://www.npmjs.org/). Installing it needs no token and no `.npmrc`.
+
+```sh
+npm install --save-dev @teopeurt/flowkit-definitions
+```
+
+Or with Bun:
+
+```sh
+bun add -d @teopeurt/flowkit-definitions
+```
+
+The binary is named `flowkit`, not the scoped package name:
+
+```sh
+npx flowkit definitions validate "definitions/**/*.yaml"
+```
+
+Or with Bun:
+
+```sh
+bunx flowkit definitions validate "definitions/**/*.yaml"
+```
+
+> **Version note:** `--help`, `--version` and `--hash` need 1.2.0 or later, the first release containing this change. Version 1.1.1 supports `flowkit definitions validate` only. The same versions are mirrored on GitHub Packages, which needs a `read:packages` token; that mirror is optional.
+
+For a non-engineer walkthrough, see the [CLI quickstart](../../docs/cli-quickstart.md).
+
 Authoring surface for Flowkit workflow definitions. The definition model itself lives in
 `@teopeurt/flowkit-core`; this package owns how a definition is written down and how it is checked
 before it reaches a worker bundle.
@@ -86,6 +116,8 @@ Anchors and aliases are expanded before the result is returned, so a YAML-author
 TypeScript twin produce the same `publishDefinition` `definitionHash`.
 
 ## Validating from the CLI
+
+> **Important:** Without `--registries`, declared-reference checks are **SKIPPED**. A typo in a policy name passes unless a registries manifest is supplied. See the [CLI quickstart](../../docs/cli-quickstart.md).
 
 ```sh
 flowkit definitions validate "definitions/*.yaml" "definitions/**/*.yaml" --registries definitions/registries.yaml

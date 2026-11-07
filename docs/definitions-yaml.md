@@ -309,8 +309,12 @@ names the offending position.
 
 ### 8.2 CLI contract
 
+> **Warning:** Without `--registries`, declared-reference validation is **SKIPPED**. A typo in a policy, guard, rule, or step name can pass. Supply a registries manifest to check references.
+
+See the [CLI quickstart](./cli-quickstart.md) for a walkthrough.
+
 ```sh
-flowkit definitions validate <glob-or-path>... [--registries <file>] [--json]
+flowkit definitions validate <glob-or-path>... [--registries <file>] [--json] [--hash]
 ```
 
 | Argument | Behaviour |
@@ -381,6 +385,7 @@ fatal failure also writes its message to stderr. Per-file output (shape; values 
     {
       "path": "/abs/path/to/definition.yaml",
       "kind": "valid | invalid | unreadable | internal-error",
+      "hash": "sha256:<64 lowercase hex> | null",
       "issues": [
         { "path": "stages.draft", "line": 12, "column": 5, "code": "unreachable-stage", "message": "..." }
       ],
@@ -405,7 +410,7 @@ Fatal output — `kind` is one of `usage`, `manifest-missing`, `manifest-unreada
 }
 ```
 
-Captured from the CLI (paths are printed absolute, as resolved against the working directory):
+Captured from the CLI (paths are printed relative to the working directory):
 
 ```json
 {
@@ -413,8 +418,9 @@ Captured from the CLI (paths are printed absolute, as resolved against the worki
   "skippedChecks": [],
   "files": [
     {
-      "path": "/home/appadmin/stridekonfam/flowkit/flowkit/packages/definitions/test/fixtures/cli-clean.yaml",
+      "path": "packages/definitions/test/fixtures/cli-clean.yaml",
       "kind": "valid",
+      "hash": "sha256:4b6b23b3d7c1f1943502180d6a85add6cfd6692fa8d392e8c876c89e35aa46c4",
       "issues": []
     }
   ]
@@ -427,8 +433,9 @@ Captured from the CLI (paths are printed absolute, as resolved against the worki
   "skippedChecks": [],
   "files": [
     {
-      "path": "/home/appadmin/stridekonfam/flowkit/flowkit/packages/definitions/test/fixtures/cli-four-issues.yaml",
+      "path": "packages/definitions/test/fixtures/cli-four-issues.yaml",
       "kind": "invalid",
+      "hash": "sha256:5850c6c7cd59495c6c7085373bfaa5defa613b35946bb41cc4ff1de6a5137d15",
       "issues": [
         {
           "path": "stages.orphaned",
