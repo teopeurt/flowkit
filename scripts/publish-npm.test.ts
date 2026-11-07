@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,6 +14,7 @@ import {
   type CommandResult,
   type CommandRunner,
   type PublishablePackage,
+  userconfigContents as buildUserconfig,
 } from './publish-npm';
 
 const version = '1.1.0';
@@ -179,13 +181,17 @@ describe('registry skip decision', () => {
 });
 
 describe('argument building', () => {
-  test('builds the registry check without credentials', () => {
-    expect(buildRegistryCheckArgs('@teopeurt/flowkit-core', version, 'https://registry.npmjs.org')).toEqual([
+  test('builds the registry check against the generated userconfig, never the ambient one', () => {
+    expect(
+      buildRegistryCheckArgs('@teopeurt/flowkit-core', version, 'https://registry.npmjs.org', '/tmp/x/.npmrc'),
+    ).toEqual([
       'view',
       '@teopeurt/flowkit-core@1.1.0',
       'version',
       '--registry',
       'https://registry.npmjs.org',
+      '--userconfig',
+      '/tmp/x/.npmrc',
     ]);
   });
 
@@ -426,5 +432,58 @@ describe('credential handling', () => {
     expect(existsSync(userconfigPath)).toBe(false);
     // The script prefers $RUNNER_TEMP (set on GitHub runners) over the OS temp dir.
     expect(userconfigPath.startsWith(process.env.RUNNER_TEMP || tmpdir())).toBe(true);
+  });
+});
+
+
+describe('registry selection beats an ambient scope mapping', () => {
+  // actions/setup-node writes `@teopeurt:registry=https://npm.pkg.github.com` into the runner's
+  // userconfig (NPM_CONFIG_USERCONFIG). A scope mapping outranks `--registry`, so the "is it on npm
+  // yet?" lookup silently went to GitHub Packages and failed with 401 in the first real release.
+  const scopes = ['@teopeurt'];
+
+  test('the generated userconfig maps every package scope to the target registry', () => {
+    const contents = buildUserconfig('https://registry.npmjs.org', scopes);
+    expect(contents).toContain('@teopeurt:registry=https://registry.npmjs.org/');
+    expect(contents).toContain('//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}');
+  });
+
+  test('real npm resolves the scope to npmjs even when the ambient userconfig maps it to GitHub Packages', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'publish-npm-scope-'));
+    try {
+      const ambient = join(dir, 'ambient.npmrc');
+      const generated = join(dir, 'generated.npmrc');
+      await writeFile(ambient, '@teopeurt:registry=https://npm.pkg.github.com\n');
+      await writeFile(generated, buildUserconfig('https://registry.npmjs.org', scopes));
+      const env = { ...process.env, NPM_CONFIG_USERCONFIG: ambient };
+      delete env.NODE_AUTH_TOKEN;
+
+      const before = spawnSync('npm', ['config', 'get', '@teopeurt:registry'], { env, encoding: 'utf8' });
+      expect(before.stdout.trim()).toBe('https://npm.pkg.github.com');
+
+      const after = spawnSync('npm', ['config', 'get', '@teopeurt:registry', '--userconfig', generated], {
+        env,
+        encoding: 'utf8',
+      });
+      expect(after.stdout.trim()).toBe('https://registry.npmjs.org/');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('every registry lookup and publish runs with the generated userconfig', async () => {
+    const commands: string[][] = [];
+    await publishPackages({
+      packagesRoot: '/repo/packages',
+      packages,
+      token: 'x'.repeat(8),
+      runner: fakeRunner({ commands }),
+      logger: () => {},
+    });
+    const npmCommands = commands.filter(([command, verb]) => command === 'npm' && (verb === 'view' || verb === 'publish'));
+    expect(npmCommands.length).toBe(14);
+    for (const args of npmCommands) {
+      expect(args).toContain('--userconfig');
+    }
   });
 });

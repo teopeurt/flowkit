@@ -145,8 +145,15 @@ export function orderPackagesForPublish(packages: PublishablePackage[]): Publish
   return ordered;
 }
 
-export function buildRegistryCheckArgs(name: string, version: string, registry: string): string[] {
-  return ['view', `${name}@${version}`, 'version', '--registry', registry];
+export function buildRegistryCheckArgs(
+  name: string,
+  version: string,
+  registry: string,
+  userconfig: string,
+): string[] {
+  // --userconfig replaces the ambient config (actions/setup-node maps @teopeurt to GitHub Packages
+  // there, and a scope mapping outranks --registry), so the lookup cannot be redirected.
+  return ['view', `${name}@${version}`, 'version', '--registry', registry, '--userconfig', userconfig];
 }
 
 export interface PublishArgsOptions {
@@ -235,13 +242,23 @@ export async function readPackages(packagesRoot: string): Promise<PublishablePac
   );
 }
 
-function userconfigContents(registry: string): string {
+/**
+ * The only npm config the publish run reads. Each package scope is mapped to the target registry
+ * explicitly: a scope mapping in the ambient userconfig would otherwise win over `--registry`.
+ */
+export function userconfigContents(registry: string, scopes: string[] = []): string {
   const host = new URL(registry).host;
+  const base = `${registry.replace(/\/$/, '')}/`;
   return [
-    `registry=${registry.replace(/\/$/, '')}/`,
+    `registry=${base}`,
+    ...[...new Set(scopes)].sort().map((scope) => `${scope}:registry=${base}`),
     `//${host}/:_authToken=\${NODE_AUTH_TOKEN}`,
     '',
   ].join('\n');
+}
+
+function packageScopes(packages: PublishablePackage[]): string[] {
+  return packages.flatMap((pkg) => (pkg.name.startsWith('@') ? [pkg.name.split('/')[0]] : []));
 }
 
 function asArguments(packages: PublishablePackage[]): string[] {
@@ -337,7 +354,7 @@ export async function publishPackages(options: PublishOptions): Promise<PublishR
   const base = options.tempRoot ?? process.env.RUNNER_TEMP ?? tmpdir();
   const temporaryRoot = await mkdtemp(join(base, 'flowkit-npm-publish-'));
   const userconfig = join(temporaryRoot, '.npmrc');
-  await writeFile(userconfig, userconfigContents(registry), { mode: 0o600 });
+  await writeFile(userconfig, userconfigContents(registry, packageScopes(scope)), { mode: 0o600 });
 
   const report: PublishReport = {
     dryRun,
@@ -359,7 +376,7 @@ export async function publishPackages(options: PublishOptions): Promise<PublishR
       let tarball = '';
 
       try {
-        const check = await runner('npm', buildRegistryCheckArgs(pkg.name, pkg.version, registry), {
+        const check = await runner('npm', buildRegistryCheckArgs(pkg.name, pkg.version, registry, userconfig), {
           env: childEnvironment,
         });
         if (interpretRegistryCheck(check) === 'published') {
