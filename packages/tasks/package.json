@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@teopeurt/flowkit-core": "^1.2.0",
-    "@noble/hashes": "^2.0.1",
+    "@noble/hashes": "^2.4.0",
     "zod": "^3.25.42"
   },
   "devDependencies": {
