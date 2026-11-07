@@ -4,7 +4,7 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "typecheck": "bun run --filter './packages/*' typecheck",
-    "test": "bun test scripts && bun run --filter './packages/*' test",
+    "test": "bun run publish:shape && bun test scripts && bun run --filter './packages/*' test",
     "build": "bun run --filter './packages/*' build",
     "pack:check": "bun run scripts/pack-check.ts",
     "version:check": "bun run scripts/check-lockstep-versions.ts && bun test scripts/check-lockstep-versions.test.ts",
@@ -12,7 +12,8 @@
     "release:version": "changeset version && bun run scripts/sync-release-versions.ts && bun install --frozen-lockfile && bun run build",
     "release:plan": "changeset publish-plan --output .changeset/release-plan.json",
     "release:validate": "bun run scripts/validate-release-plan.ts",
-    "release:publish": "changeset publish"
+    "release:publish": "changeset publish",
+    "publish:shape": "bun run scripts/check-publishable-manifests.ts"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3"

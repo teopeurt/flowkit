@@ -32,8 +32,8 @@
     "test": "bun test test"
   },
   "dependencies": {
-    "@teopeurt/flowkit-core": "workspace:^",
-    "@teopeurt/flowkit-temporal": "workspace:^",
+    "@teopeurt/flowkit-core": "^1.1.0",
+    "@teopeurt/flowkit-temporal": "^1.1.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

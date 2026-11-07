@@ -23,3 +23,5 @@ Package boundaries are compiled artifacts. Consumers use the published entry poi
 During Phase 2, all seven packages remain private GitHub Packages. Installation requires a `read:packages` token and access to the hosting repository. The repository itself is Apache-2.0 licensed, but that does not change the Phase 2 distribution channel. Public npm publication follows in Phase 4.
 
 For local work, Bun workspaces are the primary development setup. A consumer can temporarily use a sibling `workspace:` or `file:` override, validate its integration, then restore the released semver dependency. See the root README for install and development commands.
+
+Published package manifests use concrete semver ranges for internal FlowKit dependencies (not `workspace:`), so packed artifacts remain installable outside the monorepo. Use workspace/file overrides only for local validation and restore the released range before publishing.

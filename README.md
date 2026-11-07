@@ -68,3 +68,5 @@ All seven packages are pinned to the initial lockstep release version, `1.0.0`. 
 ## Contributing and security
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Report vulnerabilities privately under [SECURITY.md](SECURITY.md).
+
+Published package manifests use concrete semver ranges for internal FlowKit dependencies (not `workspace:`), so packed artifacts remain installable outside the monorepo. Use workspace/file overrides only for local validation and restore the released range before publishing.

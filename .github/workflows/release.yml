@@ -90,6 +90,7 @@ jobs:
           bun run test
           bun run build
           bun run pack:check
+          bun run publish:shape
 
       - name: Check out FlowKit demo
         if: steps.publish_plan.outputs.has_releases == 'true'

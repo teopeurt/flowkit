@@ -43,3 +43,6 @@ jobs:
 
       - name: Check packed packages
         run: bun run pack:check
+
+      - name: Check publishable manifests
+        run: bun run publish:shape
