@@ -1,4 +1,4 @@
-export const FLOWKIT_CONSUMER_VERSION = '1.1.0';
+export const FLOWKIT_CONSUMER_VERSION = '1.1.1';
 
 export { createFlowkitConsumer } from './consumer.js';
 export type {

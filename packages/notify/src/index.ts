@@ -1,4 +1,4 @@
-export const FLOWKIT_NOTIFY_VERSION = '1.1.0';
+export const FLOWKIT_NOTIFY_VERSION = '1.1.1';
 export * from './contracts.js';
 export * from './schema.js';
 export * from './dedupe.js';

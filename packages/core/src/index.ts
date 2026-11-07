@@ -1,4 +1,4 @@
-export const FLOWKIT_CORE_VERSION = '1.1.0';
+export const FLOWKIT_CORE_VERSION = '1.1.1';
 
 export { validateRegistryRefs, lintFlow, lintInterpreterFlow } from './lint';
 export { defineFlow, FlowDefinitionError, flowSchema, formatIssues } from './schema';

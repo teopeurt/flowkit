@@ -1,5 +1,14 @@
 # @teopeurt/flowkit-definitions
 
+## 1.1.1
+
+### Patch Changes
+
+- cea33bc: FlowKit 1.1.0 was published with `workspace:^` internal dependency ranges and cannot be installed outside the monorepo. This release publishes installable manifests; use this version or later.
+- Updated dependencies [cea33bc]
+  - @teopeurt/flowkit-core@1.1.1
+  - @teopeurt/flowkit-temporal@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes
