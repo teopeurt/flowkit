@@ -136,4 +136,33 @@ if grep -Fq 'echo "$NODE_AUTH_TOKEN"' "$release_workflow"; then
   exit 1
 fi
 
+# Catch-up path: GitHub Packages can already hold a version that npmjs.org lacks (the registry-backed
+# plan is then empty, so the publish job skips npm). A manual dispatch must be able to mirror it.
+mirror_line="$(grep -n '^  mirror_npm:' "$release_workflow" | head -1 | cut -d: -f1)"
+if [[ -z "$mirror_line" ]]; then
+  echo "release workflow must define a mirror_npm job for manual npm catch-up" >&2
+  exit 1
+fi
+mirror_block="$(sed -n "${mirror_line},\$p" "$release_workflow")"
+for required_fragment in \
+  "github.event_name == 'workflow_dispatch'" \
+  'id-token: write' \
+  'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}' \
+  'NPM_TOKEN is not configured' \
+  'bun run publish:shape' \
+  'bun run publish:npm'; do
+  if ! grep -Fq "$required_fragment" <<<"$mirror_block"; then
+    echo "mirror_npm job is missing: $required_fragment" >&2
+    exit 1
+  fi
+done
+if grep -Fq 'registry-url' <<<"$mirror_block"; then
+  echo "mirror_npm must not use setup-node registry-url: its ambient scope mapping redirects npm lookups" >&2
+  exit 1
+fi
+if grep -Fq 'release:publish' <<<"$mirror_block"; then
+  echo "mirror_npm must not publish to GitHub Packages" >&2
+  exit 1
+fi
+
 echo "release workflow contract passed"
