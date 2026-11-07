@@ -84,6 +84,18 @@ jobs:
             echo "has_releases=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Fail before anything is published: a missing npm token must not leave GitHub
+      # Packages ahead of npmjs.org.
+      - name: Verify npm publish credentials
+        if: steps.publish_plan.outputs.has_releases == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::error title=NPM_TOKEN missing::NPM_TOKEN is not configured. Create a granular automation token with publish rights on @teopeurt/*, add it as the repository secret NPM_TOKEN, then rerun this job. See .changeset/README.md for the one-time checklist."
+            exit 1
+          fi
+
       - name: Validate release plan and package candidates
         if: steps.publish_plan.outputs.has_releases == 'true'
         run: |
@@ -179,16 +191,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run release:publish
-
-      - name: Verify npm publish credentials
-        if: steps.publish_plan.outputs.has_releases == 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
-            echo "::error title=NPM_TOKEN missing::NPM_TOKEN is not configured. Create a granular automation token with publish rights on @teopeurt/*, add it as the repository secret NPM_TOKEN, then rerun this job. See .changeset/README.md for the one-time checklist."
-            exit 1
-          fi
 
       # GitHub Packages is published first and npmjs.org mirrors it second, so
       # a GitHub outage cannot leave npm ahead of the validated registry.

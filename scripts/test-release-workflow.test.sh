@@ -107,7 +107,11 @@ if [[ -z "$npm_publish_line" || -z "$guard_line" || "$guard_line" -ge "$npm_publ
   echo "npm credential guard must run before the npm publish step" >&2
   exit 1
 fi
-if [[ "$publish_line" -ge "$guard_line" ]]; then
+if [[ "$guard_line" -ge "$publish_line" ]]; then
+  echo "the npm credential guard must run BEFORE the GitHub Packages publish, so a missing token cannot leave one registry ahead of the other" >&2
+  exit 1
+fi
+if [[ "$publish_line" -ge "$npm_publish_line" ]]; then
   echo "npm publication must run only after the GitHub Packages publish succeeds" >&2
   exit 1
 fi
