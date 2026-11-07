@@ -424,6 +424,7 @@ describe('credential handling', () => {
       .map((args) => args[args.indexOf('--userconfig') + 1])[0];
     expect(userconfigPath).toBeDefined();
     expect(existsSync(userconfigPath)).toBe(false);
-    expect(userconfigPath.startsWith(tmpdir())).toBe(true);
+    // The script prefers $RUNNER_TEMP (set on GitHub runners) over the OS temp dir.
+    expect(userconfigPath.startsWith(process.env.RUNNER_TEMP || tmpdir())).toBe(true);
   });
 });
