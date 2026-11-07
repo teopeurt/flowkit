@@ -1,6 +1,6 @@
 {
   "name": "@teopeurt/flowkit-tasks",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -27,7 +27,7 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@teopeurt/flowkit-core": "^1.1.0",
+    "@teopeurt/flowkit-core": "^1.1.1",
     "@noble/hashes": "^2.0.1",
     "zod": "^3.25.42"
   },

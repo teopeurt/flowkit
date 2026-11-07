@@ -14,7 +14,7 @@
  * is written down and how it is checked before it reaches a worker bundle.
  */
 
-export const FLOWKIT_DEFINITIONS_VERSION = '1.1.0';
+export const FLOWKIT_DEFINITIONS_VERSION = '1.1.1';
 
 /**
  * Path of the shipped JSON Schema, relative to this package's root. Resolve it against the
