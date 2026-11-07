@@ -82,4 +82,54 @@ if [[ -z "$install_line" || -z "$release_pr_line" || "$install_line" -ge "$relea
   exit 1
 fi
 
+# npmjs.org publication runs after the GitHub Packages publish, with its own
+# credential guard and a short-lived OIDC token for provenance.
+if ! grep -Fq 'id-token: write' "$release_workflow"; then
+  echo "publish job must grant id-token: write for npm provenance" >&2
+  exit 1
+fi
+
+for required_fragment in \
+  'Verify npm publish credentials' \
+  'NPM_TOKEN is not configured' \
+  'bun run publish:npm' \
+  'FLOWKIT_CANDIDATE_TARBALL_DIR=' \
+  'npm pack --json --pack-destination "$candidate_root"'; do
+  if ! grep -Fq "$required_fragment" "$release_workflow"; then
+    echo "release workflow is missing npm publication fragment: $required_fragment" >&2
+    exit 1
+  fi
+done
+
+npm_publish_line="$(grep -n 'name: Publish to npm' "$release_workflow" | head -1 | cut -d: -f1)"
+guard_line="$(grep -n 'Verify npm publish credentials' "$release_workflow" | head -1 | cut -d: -f1)"
+if [[ -z "$npm_publish_line" || -z "$guard_line" || "$guard_line" -ge "$npm_publish_line" ]]; then
+  echo "npm credential guard must run before the npm publish step" >&2
+  exit 1
+fi
+if [[ "$publish_line" -ge "$guard_line" ]]; then
+  echo "npm publication must run only after the GitHub Packages publish succeeds" >&2
+  exit 1
+fi
+
+# The npm step must pass the secret through env (never argv) and keep its own
+# registry selection, independent of setup-node's GitHub Packages .npmrc.
+npm_step_block="$(sed -n "${npm_publish_line},$((npm_publish_line + 12))p" "$release_workflow")"
+if ! grep -Fq 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}' <<<"$npm_step_block"; then
+  echo "npm publish step must receive NODE_AUTH_TOKEN from secrets.NPM_TOKEN" >&2
+  exit 1
+fi
+if ! grep -Fq "if: steps.publish_plan.outputs.has_releases == 'true'" <<<"$npm_step_block"; then
+  echo "npm publish step must be gated on has_releases" >&2
+  exit 1
+fi
+if grep -Eq 'echo .*NODE_AUTH_TOKEN|\$\{\{ secrets\.NPM_TOKEN \}\}.*--token|npm publish.*secrets\.' "$release_workflow"; then
+  echo "release workflow must never place the npm token in a command line" >&2
+  exit 1
+fi
+if grep -Fq 'echo "$NODE_AUTH_TOKEN"' "$release_workflow"; then
+  echo "release workflow must never echo the npm token" >&2
+  exit 1
+fi
+
 echo "release workflow contract passed"
