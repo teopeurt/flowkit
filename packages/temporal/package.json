@@ -33,14 +33,14 @@
   "dependencies": {
     "@teopeurt/flowkit-consumer": "^1.2.0",
     "@teopeurt/flowkit-core": "^1.2.0",
-    "@noble/hashes": "^2.0.1",
-    "@temporalio/workflow": "1.16.2"
+    "@noble/hashes": "^2.4.0",
+    "@temporalio/workflow": "1.16.3"
   },
   "devDependencies": {
-    "@temporalio/client": "1.16.2",
-    "@temporalio/common": "1.16.2",
-    "@temporalio/testing": "1.16.2",
-    "@temporalio/worker": "1.16.2",
+    "@temporalio/client": "1.16.3",
+    "@temporalio/common": "1.16.3",
+    "@temporalio/testing": "1.16.3",
+    "@temporalio/worker": "1.16.3",
     "tsup": "^8.5.0",
     "typescript": "^5"
   },
