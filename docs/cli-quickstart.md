@@ -4,7 +4,7 @@ This walkthrough is for authors who write workflow definitions, not for engineer
 
 ## Install from npm
 
-The CLI is published on the public npm registry at [npmjs.org](https://www.npmjs.org/). Installing and running it needs no token and no `.npmrc`.
+The CLI is published on the public npm registry at [npmjs.org](https://www.npmjs.com/package/@teopeurt/flowkit-definitions). Installing and running it needs no token and no `.npmrc`.
 
 ```sh
 npm install --save-dev @teopeurt/flowkit-definitions
