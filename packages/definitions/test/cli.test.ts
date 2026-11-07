@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 
 import { runDefinitionsValidate } from '../src/cli';
 import type { ValidateDeps } from '../src/cli';
+import { FLOWKIT_DEFINITIONS_VERSION } from '../src/index';
 
 const packageRoot = resolve(import.meta.dir, '..');
 
@@ -190,12 +191,13 @@ describe('flowkit definitions validate', () => {
       const result = await runCli(args);
       expect(result.code).toBe(0);
       expect(result.stdout).toContain('Usage:');
+      expect(result.stdout.match(/^Usage:/gm)).toHaveLength(1);
       expect(result.stderr).toBe('');
     }
     for (const args of [['--version'], ['-v'], ['-V']]) {
       const result = await runCli(args);
       expect(result.code).toBe(0);
-      expect(result.stdout.trim()).toBe('@teopeurt/flowkit-definitions 1.1.0');
+      expect(result.stdout.trim()).toBe(`@teopeurt/flowkit-definitions ${FLOWKIT_DEFINITIONS_VERSION}`);
       expect(result.stderr).toBe('');
     }
   });
@@ -203,10 +205,13 @@ describe('flowkit definitions validate', () => {
   test('prints the published definition hash and includes it in JSON', async () => {
     const text = await runCli(['definitions', 'validate', 'test/fixtures/cli-clean.yaml', '--hash']);
     expect(text.code).toBe(0);
-    expect(text.stdout).toMatch(/sha256:[0-9a-f]{64}  .*test\/fixtures\/cli-clean\.yaml/);
+    expect(text.stdout).toContain('sha256:');
+    expect(text.stdout).toContain('  test/fixtures/cli-clean.yaml\n');
+    expect(text.stdout).not.toContain(packageRoot);
     const json = await runCli(['definitions', 'validate', 'test/fixtures/cli-clean.yaml', '--json']);
-    const document = JSON.parse(json.stdout) as { files: Array<{ hash: string }> };
+    const document = JSON.parse(json.stdout) as { files: Array<{ hash: string; path: string }> };
     expect(document.files[0].hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(document.files[0].path).toBe('test/fixtures/cli-clean.yaml');
   });
 
   test('exits 2 with usage for an unknown subcommand', async () => {

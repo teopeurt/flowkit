@@ -47,7 +47,7 @@ export const EXIT_UNREADABLE_MANIFEST = 6;
 export const EXIT_NO_FILES_MATCHED = 7;
 export const EXIT_INTERNAL_ERROR = 70;
 
-const USAGE = `Usage: flowkit definitions validate <glob-or-path>... [--registries <file>] [--json]
+const USAGE = `Usage: flowkit definitions validate <glob-or-path>... [--registries <file>] [--json] [--hash]
 
   <glob-or-path>...     One or more definition files or globs. Every match is
                         validated once, even if several arguments match it.
@@ -565,7 +565,7 @@ export interface ValidateDeps {
   stderr: (text: string) => void;
 }
 
-const HELP_USAGE = `Usage: flowkit definitions validate <glob-or-path>... [--registries <file>] [--json] [--hash]\n\n${USAGE}`;
+const HELP_USAGE = USAGE;
 
 const usage = (message: string): CliFatal => new CliFatal(EXIT_USAGE, 'usage', message, true);
 
@@ -854,6 +854,10 @@ const execute = async (
   }
   results.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 
+  // Report paths the way the caller named them: relative to the working
+  // directory. Absolute paths leak the machine layout into logs and docs.
+  const displayPath = (path: string): string => relative(cwd, path) || path;
+
   const exitCode = worstExit(results);
   const issueTotal = results.reduce((count, result) => count + result.issues.length, 0);
   const errorCount = results.filter(
@@ -867,7 +871,7 @@ const execute = async (
           valid: exitCode === EXIT_CLEAN,
           skippedChecks: skipped,
           files: results.map((result) => ({
-            path: result.path,
+            path: displayPath(result.path),
             kind: result.kind,
             hash: result.hash,
             issues: result.issues.map((issue) => ({
@@ -886,12 +890,13 @@ const execute = async (
     );
   } else {
     for (const result of results) {
+      const shownPath = displayPath(result.path);
       if (results.length > 1) {
-        deps.stdout(`# ${result.path}\n`);
+        deps.stdout(`# ${shownPath}\n`);
       }
 
       if (result.hash !== null && parsed.hash) {
-        deps.stdout(`${result.hash}  ${result.path}\n`);
+        deps.stdout(`${result.hash}  ${shownPath}\n`);
       }
 
       for (const issue of result.issues) {
