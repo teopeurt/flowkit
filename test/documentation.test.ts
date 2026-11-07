@@ -61,10 +61,11 @@ afterAll(async () => {
 });
 
 describe('public documentation contract', () => {
-  test('ships Apache-2.0 licensing and private registry setup without tokens', async () => {
-    const [license, npmrc, ...documents] = await Promise.all([
+  test('ships Apache-2.0 licensing, public npm install, and an optional GitHub Packages mirror', async () => {
+    const [license, npmrc, rootReadme, ...documents] = await Promise.all([
       readDocumentation('LICENSE'),
       readDocumentation('.npmrc.example'),
+      readDocumentation('README.md'),
       ...(await documentationPaths()).map(readDocumentation),
     ]);
 
@@ -72,6 +73,9 @@ describe('public documentation contract', () => {
     expect(license).toContain('Version 2.0, January 2004');
     expect(npmrc).toContain('@teopeurt:registry=https://npm.pkg.github.com');
     expect(npmrc).toContain('${GITHUB_PACKAGES_TOKEN}');
+    expect(rootReadme).toContain('npmjs.org');
+    expect(rootReadme).toContain('needs no token');
+    expect(rootReadme).toContain('mirrored to GitHub Packages');
     for (const document of documents) expect(document).not.toMatch(tokenPattern);
   });
 

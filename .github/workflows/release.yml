@@ -45,6 +45,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # npm provenance signs an OIDC token; it is only usable from this job.
+      id-token: write
     steps:
       - name: Check out FlowKit
         uses: actions/checkout@v7
@@ -80,6 +82,18 @@ jobs:
             echo "has_releases=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_releases=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Fail before anything is published: a missing npm token must not leave GitHub
+      # Packages ahead of npmjs.org.
+      - name: Verify npm publish credentials
+        if: steps.publish_plan.outputs.has_releases == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::error title=NPM_TOKEN missing::NPM_TOKEN is not configured. Create a granular automation token with publish rights on @teopeurt/*, add it as the repository secret NPM_TOKEN, then rerun this job. See .changeset/README.md for the one-time checklist."
+            exit 1
           fi
 
       - name: Validate release plan and package candidates
@@ -136,17 +150,18 @@ jobs:
           bun run build
 
           candidate_root="$(mktemp -d "$RUNNER_TEMP/flowkit-candidate.XXXXXX")"
-          cleanup() { rm -rf "$candidate_root"; }
-          trap cleanup EXIT
+          # The tarballs are kept until the npm publish step: npmjs.org must
+          # receive the exact files exercised by the gates below, not a repack.
 
           packages=(auth consumer core notify tasks temporal definitions)
           demo_packages=(auth consumer core notify tasks temporal)
           declare -A candidate_tarball_by_package=()
           expected_version="$(node -e 'const fs = require("node:fs"); const names = ["auth", "consumer", "core", "definitions", "notify", "tasks", "temporal"]; const manifests = names.map((name) => JSON.parse(fs.readFileSync(`packages/${name}/package.json`, "utf8"))); const versions = new Set(manifests.map(({ version }) => version)); if (versions.size !== 1) throw new Error("candidate package versions are not lockstep"); process.stdout.write(manifests[0].version);')"
           for package in "${packages[@]}"; do
-            mkdir -p "$candidate_root/$package"
-            (cd "packages/$package" && bun pm pack --destination "$candidate_root/$package")
-            tarball="$(find "$candidate_root/$package" -maxdepth 1 -type f -name '*.tgz' -print -quit)"
+            # Pack with npm, not bun: npm publish uploads the bytes npm pack
+            # produced, so the tested candidate and the shipped artifact agree.
+            pack_json="$(cd "packages/$package" && npm pack --json --pack-destination "$candidate_root")"
+            tarball="$candidate_root/$(printf '%s' "$pack_json" | node -e 'const data = JSON.parse(require("node:fs").readFileSync(0, "utf8")); const entry = Object.values(data)[0]; process.stdout.write(entry.filename);')"
             if [[ -z "$tarball" ]]; then
               echo "no candidate tarball produced for $package" >&2
               exit 1
@@ -168,8 +183,19 @@ jobs:
             "$GITHUB_WORKSPACE/flowkit-demo" \
             "${demo_candidate_tarballs[@]}"
 
+          # Hand the exact gate-tested tarballs to `bun run publish:npm`.
+          echo "FLOWKIT_CANDIDATE_TARBALL_DIR=$candidate_root" >> "$GITHUB_ENV"
+
       - name: Publish validated candidates
         if: steps.publish_plan.outputs.has_releases == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run release:publish
+
+      # GitHub Packages is published first and npmjs.org mirrors it second, so
+      # a GitHub outage cannot leave npm ahead of the validated registry.
+      - name: Publish to npm
+        if: steps.publish_plan.outputs.has_releases == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: bun run publish:npm
