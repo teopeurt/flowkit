@@ -26,4 +26,4 @@ The declared internal dependency edges (dependency → dependent) are:
 `@teopeurt/flowkit-definitions` ships its schema as `schema/flowdefinition.schema.json` alongside its
 runtime entry point. Refer to the individual READMEs for usage. Every package emits ESM, CommonJS, and declaration artifacts under `dist/`.
 
-Phase 2 packages are private GitHub Packages. They require a `read:packages` token and repository access. Public npm publication is planned for Phase 4.
+Packages are published on npmjs.org; installing them needs no token or registry configuration. Releases are mirrored to GitHub Packages, which requires a `read:packages` token and repository access.

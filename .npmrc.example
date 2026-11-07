@@ -1,2 +1,3 @@
+# Optional GitHub Packages mirror. npmjs.org needs no token.
 @teopeurt:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}

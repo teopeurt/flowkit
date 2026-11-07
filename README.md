@@ -1,20 +1,15 @@
 > **Package scope migration:** Versions through 1.0.0 were published as `@naakwu/*`. From 1.1.0 onward, install and import the same API as `@teopeurt/*`.
 
-## GitHub Packages
+## Install
 
-The packages are public on GitHub Packages. Configure the scope registry and authenticate with a GitHub token that has `read:packages`:
-
-```ini
-@teopeurt:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
+The packages are public on [npmjs.org](https://www.npmjs.org/); installing them needs no token and no registry configuration. Every release is also mirrored to GitHub Packages for consumers who already authenticate there. The seven package names are listed under [Packages](#packages).
 
 Consumers upgrading from 1.0.0 must rename `@naakwu/flowkit-*` imports and dependencies to `@teopeurt/flowkit-*`; the API is unchanged.
 
 # FlowKit
 
 FlowKit is a set of TypeScript packages for defining, running, projecting, and integrating durable flows.
-This repository is Apache-2.0 licensed source. During Phase 2, packages install only from private GitHub Packages; public npm publication is planned for Phase 4.
+This repository is Apache-2.0 licensed source. The packages install from the public npm registry; GitHub Packages carries the same releases as a mirror.
 
 ## Packages
 
@@ -30,11 +25,9 @@ This repository is Apache-2.0 licensed source. During Phase 2, packages install 
 
 See [package contracts](docs/package-contracts.md) and the [architecture](docs/architecture.md) for the supported entry points and boundaries.
 
-## Install from GitHub Packages
+## Install
 
-You need a GitHub Packages token with `read:packages` and access to the private repository that hosts these packages. Keep the token in your package-manager configuration or environment; never commit it.
-
-For npm, pnpm, Bun, and Yarn Classic, copy [`.npmrc.example`](.npmrc.example) to your user-level or project-level npm configuration, set `GITHUB_PACKAGES_TOKEN` in your shell or CI secret store, then install:
+Install from npmjs.org with no authentication:
 
 ```sh
 npm install @teopeurt/flowkit-core
@@ -42,6 +35,12 @@ pnpm add @teopeurt/flowkit-core
 yarn add @teopeurt/flowkit-core
 bun add @teopeurt/flowkit-core
 ```
+
+### GitHub Packages mirror
+
+GitHub Packages hosts the same released versions. Installing from it requires a GitHub token with `read:packages` and access to this repository. Keep the token in your package-manager configuration or environment; never commit it.
+
+For npm, pnpm, Bun, and Yarn Classic, copy [`.npmrc.example`](.npmrc.example) to your user-level or project-level npm configuration, set `GITHUB_PACKAGES_TOKEN` in your shell or CI secret store, then install the same package names as above.
 
 For Yarn Berry (v2+), configure the scope in `.yarnrc.yml` instead of relying on `.npmrc`:
 
@@ -63,7 +62,13 @@ For a local sibling override, replace the affected dependency in the consuming w
 
 ## Releases
 
-All seven packages are pinned to the initial lockstep release version, `1.0.0`. The first private publication uses Changesets' publish plan to publish those existing manifest versions, rather than creating a synthetic version bump. A release builds and checks packed artifacts before publishing to GitHub Packages. Phase 2 remains private-package distribution; public npm publication is explicitly deferred to Phase 4.
+All seven packages release in lockstep. A change to any package goes through a Changesets release PR; the release job validates the packed manifests and runs the exact candidate tarballs against the downstream demo before publishing.
+
+Publication targets two registries, in order: GitHub Packages first, then npmjs.org. `bun run publish:npm` uploads the tarballs the candidate gate tested instead of repacking them, and skips any `<name>@<version>` that npmjs.org already carries, so a partially failed run resumes cleanly. Installing from npmjs.org needs no token; the GitHub Packages mirror requires `read:packages`.
+
+Version 1.1.0 on GitHub Packages is not installable because its tarballs shipped `workspace:` dependency ranges. The first installable version — and the first version on npmjs.org — is the next release produced by this pipeline.
+
+Maintainers: see [`.changeset/README.md`](.changeset/README.md) for the one-time npm organization and `NPM_TOKEN` setup.
 
 ## Contributing and security
 
