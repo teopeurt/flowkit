@@ -66,7 +66,7 @@ All seven packages release in lockstep. A change to any package goes through a C
 
 Publication targets two registries, in order: GitHub Packages first, then npmjs.org. `bun run publish:npm` uploads the tarballs the candidate gate tested instead of repacking them, and skips any `<name>@<version>` that npmjs.org already carries, so a partially failed run resumes cleanly. Installing from npmjs.org needs no token; the GitHub Packages mirror requires `read:packages`.
 
-Version 1.1.0 on GitHub Packages is not installable because its tarballs shipped `workspace:` dependency ranges. The first installable version — and the first version on npmjs.org — is the next release produced by this pipeline.
+Version 1.1.0 on GitHub Packages is not installable because its tarballs shipped `workspace:` dependency ranges. Version 1.1.1 is the first installable release and the first version published on npmjs.org.
 
 Maintainers: see [`.changeset/README.md`](.changeset/README.md) for the one-time npm organization and `NPM_TOKEN` setup.
 

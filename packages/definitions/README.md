@@ -2,19 +2,33 @@
 
 # @teopeurt/flowkit-definitions
 
-## Install from GitHub Packages
+## Install
 
-GitHub Packages requires a GitHub token with `read:packages`, even for public packages. Set `GITHUB_TOKEN`, then add this to `.npmrc`:
+The package is published on the public npm registry at [npmjs.org](https://www.npmjs.org/). Installing it needs no token and no `.npmrc`.
 
 ```sh
-@teopeurt:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+npm install --save-dev @teopeurt/flowkit-definitions
 ```
 
+Or with Bun:
+
 ```sh
-bun add @teopeurt/flowkit-definitions
+bun add -d @teopeurt/flowkit-definitions
+```
+
+The binary is named `flowkit`, not the scoped package name:
+
+```sh
+npx flowkit definitions validate "definitions/**/*.yaml"
+```
+
+Or with Bun:
+
+```sh
 bunx flowkit definitions validate "definitions/**/*.yaml"
 ```
+
+> **Version note:** `--help`, `--version` and `--hash` need 1.2.0 or later, the first release containing this change. Version 1.1.1 supports `flowkit definitions validate` only. The same versions are mirrored on GitHub Packages, which needs a `read:packages` token; that mirror is optional.
 
 For a non-engineer walkthrough, see the [CLI quickstart](../../docs/cli-quickstart.md).
 

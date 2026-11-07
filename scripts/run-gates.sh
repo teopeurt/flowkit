@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -u
-export PATH=/home/appadmin/.local/share/mise/installs/bun/1.3.14/bin:$PATH
 run() { echo "== $1"; shift; "$@"; rc=$?; echo "rc=$rc"; return $rc; }
 run install bun install --frozen-lockfile
 run build bun run build
