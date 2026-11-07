@@ -1,5 +1,9 @@
 # @teopeurt/flowkit-auth
 
+## 1.2.0
+
+No changes in this release.
+
 ## 1.1.1
 
 ### Patch Changes
