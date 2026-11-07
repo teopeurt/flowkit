@@ -13,6 +13,7 @@
     "release:plan": "changeset publish-plan --output .changeset/release-plan.json",
     "release:validate": "bun run scripts/validate-release-plan.ts",
     "release:publish": "changeset publish",
+    "publish:npm": "bun run scripts/publish-npm.ts",
     "publish:shape": "bun run scripts/check-publishable-manifests.ts"
   },
   "devDependencies": {
